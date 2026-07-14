@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biliardo v2 DJ - web</title>
+<style>
+  :root{color-scheme:dark}*{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#06060a;color:#d8d8e0;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
+  #app{display:flex;height:100%}
+  #panel{width:260px;flex:0 0 260px;padding:12px;overflow-y:auto;background:#0d0d14;border-right:1px solid #1c1c28}
+  #stage{flex:1;position:relative}canvas{display:block;width:100%;height:100%}
+  h1{font-size:14px;margin:0 0 8px}.row{display:flex;gap:6px;margin-bottom:8px}
+  button{flex:1;padding:7px 4px;background:#1c1c2a;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:6px;cursor:pointer;font-size:12px}
+  button:hover{background:#262636}button.on{background:#2b4;color:#041;border-color:#2b4}
+  label{display:block;margin:7px 0 2px;color:#9a9ab0;font-size:11px}
+  input[type=range]{width:100%}select{width:100%;padding:4px;background:#14141e;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:5px}
+  hr{border:none;border-top:1px solid #1c1c28;margin:10px 0}.val{float:right;color:#d8d8e0}
+  .ball{border:1px solid #1c1c28;border-radius:6px;padding:6px;margin-bottom:6px}
+  #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#667;font-size:15px;pointer-events:none}
+  #lang{position:absolute;top:8px;right:8px;width:auto;flex:none;padding:4px 10px}
+  .chk{display:inline;width:auto;flex:none;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>BILIARDO v2 · web</h1>
+    <div class="row"><button id="play">▶ Play</button><button id="pause" data-t="pause">‖ Pausa</button><button id="restart">⟳ Restart</button></div>
+    <hr>
+    <label data-t="lcfg">Config. iniziale</label>
+    <select id="config"><option>diagonale</option><option>radente</option><option>verticale</option><option>ventaglio</option></select>
+    <label data-t="ltopo">Topologia</label>
+    <select id="topo"><option>stadio</option><option>ellisse</option><option>ovale</option><option>superellisse</option></select>
+    <label data-t="lscala">scalaBil <span class="val" id="vscala">0.70</span></label><input type="range" id="scala" min="0.35" max="1.2" step="0.01" value="0.7">
+    <label data-t="leps">eps (ovale) <span class="val" id="veps">0.30</span></label><input type="range" id="eps" min="0" max="0.45" step="0.01" value="0.3">
+    <hr>
+    <label data-t="lroot">root Hz <span class="val" id="vroot">110</span></label><input type="range" id="root" min="41" max="220" step="1" value="110">
+    <label data-t="lscale">scala</label>
+    <select id="scale"><option value="0,3,5,7,10">pentatonica min</option><option value="0,2,4,7,9">pentatonica maj</option><option value="0,2,3,5,7,8,10">minore</option><option value="0,1,2,3,4,5,6,7,8,9,10,11">cromatica</option></select>
+    <label class="big" data-t="lballs" style="font-weight:bold;margin-top:8px">PALLINE (onda · ottava · spd)</label>
+    <div id="balls"></div>
+    <hr>
+    <label data-t="lbA">base A</label>
+    <select id="patA"><option>two-step</option><option>four</option><option>breakbeat</option><option>punk</option><option>dubstep</option><option>off</option></select>
+    <label data-t="lbB">base B (sovrapp.)</label>
+    <select id="patB"><option>off</option><option>breakbeat</option><option>four</option><option>two-step</option><option>punk</option></select>
+    <label data-t="lbpm">bpm <span class="val" id="vbpm">172</span></label><input type="range" id="bpm" min="90" max="185" step="1" value="172">
+    <label><input type="checkbox" class="chk" id="wob" checked> <span data-t="lwob">wobble</span> · rate <span class="val" id="vwr">2.0</span></label>
+    <input type="range" id="wr" min="0.5" max="8" step="0.5" value="2">
+    <label data-t="ldrive">drive <span class="val" id="vdrive">1.3</span></label><input type="range" id="drive" min="1" max="6" step="0.1" value="1.3">
+    <label data-t="lvol">volume <span class="val" id="vvol">0.8</span></label><input type="range" id="vol" min="0" max="1" step="0.01" value="0.8">
+    <hr><div id="info" style="color:#778;font-size:11px"></div>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas><button id="lang">EN</button>
+    <div id="hint" data-t="hint">Premi ▶ Play per avviare l'audio</div></div>
+</div>
+<script>
+"use strict";
+const T={it:{pause:"‖ Pausa",lcfg:"Config. iniziale",ltopo:"Topologia",lscala:"scalaBil",leps:"eps (ovale)",lroot:"root Hz",lscale:"scala",lballs:"PALLINE (onda · ottava · spd)",lbA:"base A",lbB:"base B (sovrapp.)",lbpm:"bpm",lwob:"wobble",ldrive:"drive",lvol:"volume",hint:"Premi ▶ Play per avviare l'audio",ball:"pallina"},
+ en:{pause:"‖ Pause",lcfg:"Start config",ltopo:"Topology",lscala:"scalaBil",leps:"eps (oval)",lroot:"root Hz",lscale:"scale",lballs:"BALLS (wave · octave · spd)",lbA:"base A",lbB:"base B (overlap)",lbpm:"bpm",lwob:"wobble",ldrive:"drive",lvol:"volume",hint:"Press ▶ Play to start audio",ball:"ball"}};
+let LANG="it";
+function setLang(l){LANG=l;document.querySelectorAll("[data-t]").forEach(e=>{const k=e.getAttribute("data-t"),t=T[l][k];if(t===undefined)return;const v=e.querySelector(".val");if(v){e.textContent=t+" ";e.appendChild(v);}else e.textContent=t;});document.querySelectorAll(".blab").forEach((e,i)=>e.textContent=T[l].ball+" "+(i+1));document.getElementById("lang").textContent=l==="it"?"EN":"IT";}
+
+const BASE_SPEED=3,VIEW=1.6,pExp=0.9;
+const P={config:"diagonale",topo:"stadio",scala:0.7,eps:0.3,root:110,nOtt:2,steps:[0,3,5,7,10],
+  patA:"two-step",patB:"off",bpm:172,wob:true,wr:2,drive:1.3,vol:0.8};
+const balls=[{wave:"sine",oct:0.5,spd:3},{wave:"triangle",oct:1,spd:1.5},{wave:"saw",oct:1,spd:2}];
+const COL=["#ff4638","#5adc78","#50aaff"],CORE=["#ffb4aa","#beffc8","#bedcff"];
+const WAVES=["sine","triangle","saw","square"],WMAP={sine:"sine",triangle:"triangle",saw:"sawtooth",square:"square"};
+const PATTERNS={off:{},"two-step":{k:[0,10],s:[8],h:[0,2,4,6,8,10,12,14]},four:{k:[0,4,8,12],s:[4,12],h:[2,6,10,14]},breakbeat:{k:[0,10,11],s:[4,12,14],h:[0,2,4,6,8,10,12,14]},punk:{k:[0,4,8,12],s:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},dubstep:{k:[0],s:[8],h:[0,4,8,12],o:[6,14]}};
+
+// fisica
+function Fimp0(x,y){switch(P.topo){case"ellisse":return (x/1.35)**2+(y/0.85)**2-1;case"ovale":return Math.hypot(x,y)-(1+P.eps*Math.cos(Math.atan2(y,x)));case"superellisse":return Math.abs(x/1.2)**4+Math.abs(y/0.9)**4-1;case"stadio":{const cx=Math.max(-0.7,Math.min(0.7,x));return Math.hypot(x-cx,y)-0.9;}default:return Math.hypot(x,y)-1;}}
+function Fimp(x,y){return Fimp0(x/P.scala,y/P.scala);}
+function normal(x,y){const h=1e-4;let gx=Fimp(x+h,y)-Fimp(x-h,y),gy=Fimp(x,y+h)-Fimp(x,y-h);const n=Math.hypot(gx,gy)||1;return[gx/n,gy/n];}
+function rayExit(Px,Py,dx,dy){const N=500,tm=4;let pF=Fimp(Px+1e-5*dx,Py+1e-5*dy),pT=1e-5;for(let i=1;i<=N;i++){const t=1e-5+(tm-1e-5)*i/N,f=Fimp(Px+t*dx,Py+t*dy);if(pF<0&&f>=0){let lo=pT,hi=t;for(let k=0;k<40;k++){const m=.5*(lo+hi);if(Fimp(Px+m*dx,Py+m*dy)<0)lo=m;else hi=m;}return .5*(lo+hi);}pF=f;pT=t;}return null;}
+function boundaryPts(){const a=[];for(let i=0;i<=220;i++){const q=2*Math.PI*i/220,t=rayExit(0,0,Math.cos(q),Math.sin(q));if(t)a.push([t*Math.cos(q),t*Math.sin(q)]);}if(a.length)a.push(a[0]);return a;}
+let bnd=[],bndSig="";function refreshBnd(){const s=P.topo+P.scala.toFixed(3)+P.eps.toFixed(3);if(s!==bndSig){bnd=boundaryPts();bndSig=s;}}
+
+// stato palline
+let BP=[],BD=[],segs=[[],[],[]],seg=[null,null,null],bounces=[],birk=[[],[],[]];
+function initBalls(){let base,spread;const cfg=P.config;let p0;
+  if(cfg==="radente"){p0=[0,0.3];base=3;spread=0;}else if(cfg==="verticale"){p0=[0.02,-0.05];base=90;spread=0;}
+  else if(cfg==="ventaglio"){p0=[0,0];base=37;spread=7;}else{p0=[0.03,-0.02];base=37;spread=0;}
+  const offs=[[0,0],[0.05,-0.01],[-0.01,0.05]];BP=offs.map(o=>[p0[0]+o[0],p0[1]+o[1]]);
+  BD=[0,1,2].map(b=>{const r=(base+spread*b)*Math.PI/180;return[Math.cos(r),Math.sin(r)];});
+  segs=[[],[],[]];bounces=[];birk=[[],[],[]];}
+function ballExit(b){let t=rayExit(BP[b][0],BP[b][1],BD[b][0],BD[b][1]);if(t===null){BP[b]=[0,0];t=rayExit(0,0,BD[b][0],BD[b][1])||1;}return t;}
+function newSeg(b,t0){const len=ballExit(b),flight=len/(BASE_SPEED*balls[b].spd),hit=[BP[b][0]+len*BD[b][0],BP[b][1]+len*BD[b][1]];seg[b]={t0,t1:t0+flight,p0:BP[b].slice(),dir:BD[b].slice(),len,hit};segs[b].push(seg[b]);}
+
+// audio
+let ac,synthBus,drumBus,shaper,volGain,noiseBuf,wobOsc,wobDepth,stepIdx=0,nextStep=0,running=false,started=false;
+function scaleFreqs(){const a=[];for(let o=0;o<=P.nOtt;o++)for(const s of P.steps)a.push(P.root*Math.pow(2,o+s/12));a.sort((x,y)=>x-y);return a;}
+let SCALE=scaleFreqs();function snap(u){const i=Math.round(1+u*(SCALE.length-1))-1;return SCALE[Math.min(Math.max(i,0),SCALE.length-1)];}
+function driveCurve(dr){const n=1024,c=new Float32Array(n),k=Math.max(1.0001,dr),th=Math.tanh(k);for(let i=0;i<n;i++){const x=(i/(n-1))*2-1;c[i]=Math.tanh(k*x)/th}return c;}
+function makeNoise(){const n=ac.sampleRate*0.3,b=ac.createBuffer(1,n,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return b;}
+function initAudio(){ac=new (window.AudioContext||window.webkitAudioContext)();shaper=ac.createWaveShaper();shaper.curve=driveCurve(P.drive);volGain=ac.createGain();volGain.gain.value=P.vol;shaper.connect(volGain);volGain.connect(ac.destination);
+  synthBus=ac.createGain();drumBus=ac.createGain();synthBus.connect(shaper);drumBus.connect(shaper);noiseBuf=makeNoise();
+  wobOsc=ac.createOscillator();wobOsc.type="sine";wobDepth=ac.createGain();wobDepth.gain.value=0.5;wobOsc.connect(wobDepth);wobDepth.connect(synthBus.gain);synthBus.gain.value=0.5;wobOsc.start();updateWob();}
+function updateWob(){if(!ac)return;if(P.wob){wobOsc.frequency.value=P.wr*P.bpm/60;wobDepth.gain.value=0.45;synthBus.gain.value=0.55;}else{wobDepth.gain.value=0;synthBus.gain.value=1;}}
+function noteAt(t,freq,amp,wtype){const o=ac.createOscillator();o.type=wtype;o.frequency.value=freq;const g=ac.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(amp,t+0.004);g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);o.connect(g);g.connect(synthBus);o.start(t);o.stop(t+0.42);}
+function kickAt(t){const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(45,t+0.12);g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.25);o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+0.3);}
+function noiseAt(t,dur,hp,amp,tone){const s=ac.createBufferSource();s.buffer=noiseBuf;const f=ac.createBiquadFilter();f.type="highpass";f.frequency.value=hp;const g=ac.createGain();g.gain.setValueAtTime(amp,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(drumBus);s.start(t);s.stop(t+dur+0.02);if(tone){const o=ac.createOscillator(),og=ac.createGain();o.frequency.value=tone;og.gain.setValueAtTime(amp*.5,t);og.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(og);og.connect(drumBus);o.start(t);o.stop(t+dur+0.02);}}
+
+function scheduler(){
+  if(!started||!running||ac.state!=="running")return;
+  const ahead=ac.currentTime+0.12;
+  for(let b=0;b<3;b++){let guard=0;
+    while(seg[b].t1<ahead&&guard++<300){const hp=seg[b].hit,nrm=normal(hp[0],hp[1]);
+      const dn=seg[b].dir[0]*nrm[0]+seg[b].dir[1]*nrm[1],inc=Math.abs(dn);
+      let s=Math.atan2(hp[1],hp[0]);s=((s%(2*Math.PI))+2*Math.PI)%(2*Math.PI);s/=2*Math.PI;
+      noteAt(seg[b].t1,snap(Math.pow(s,pExp))*balls[b].oct,0.18*(0.3+0.7*inc),WMAP[balls[b].wave]);
+      bounces.push({t:seg[b].t1,x:hp[0],y:hp[1],b});
+      BD[b]=[seg[b].dir[0]-2*dn*nrm[0],seg[b].dir[1]-2*dn*nrm[1]];BP[b]=hp;
+      const tan=[-nrm[1],nrm[0]];birk[b].push({t:seg[b].t1,s,p:BD[b][0]*tan[0]+BD[b][1]*tan[1]});if(birk[b].length>200)birk[b].shift();
+      newSeg(b,seg[b].t1);}}
+  for(const key of["patA","patB"]){const pat=PATTERNS[P[key]];if(!pat)continue;}
+  const sixt=60/P.bpm/4;let g2=0;
+  while(nextStep<ahead&&g2++<200){const s16=stepIdx%16,t=nextStep;
+    for(const key of["patA","patB"]){const pat=PATTERNS[P[key]];if(!pat.k)continue;
+      if(pat.k.includes(s16))kickAt(t);if(pat.s&&pat.s.includes(s16))noiseAt(t,0.12,1200,0.6,190);if(pat.h&&pat.h.includes(s16))noiseAt(t,0.04,7000,0.22,0);if(pat.o&&pat.o.includes(s16))noiseAt(t,0.14,6000,0.22,0);}
+    stepIdx++;nextStep+=sixt;}
+  const cut=ac.currentTime-2;for(let b=0;b<3;b++)segs[b]=segs[b].filter(s=>s.t1>cut);bounces=bounces.filter(x=>x.t>cut);
+}
+function startClocks(){initBalls();for(let b=0;b<3;b++)newSeg(b,ac.currentTime);stepIdx=0;nextStep=ac.currentTime;}
+
+const cv=document.getElementById("cv"),cx=cv.getContext("2d");
+function draw(){requestAnimationFrame(draw);const w=cv.clientWidth,h=cv.clientHeight;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  cx.fillStyle="#06060a";cx.fillRect(0,0,w,h);refreshBnd();
+  const S=Math.min(w,h),ox=(w-S)/2,oy=(h-S)/2,f=S/560,w2p=(x,y)=>[ox+(x+VIEW)/(2*VIEW)*S,oy+(VIEW-y)/(2*VIEW)*S];
+  cx.strokeStyle="#2d2d38";cx.lineWidth=1;cx.beginPath();bnd.forEach((p,i)=>{const q=w2p(p[0],p[1]);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]);});cx.stroke();
+  if(!started)return;const now=ac.currentTime;
+  for(let b=0;b<3;b++){let cur=null;for(const s of segs[b])if(s.t0<=now&&now<s.t1){cur=s;break;}
+    let pos=BP[b];if(cur){const fr=(now-cur.t0)/(cur.t1-cur.t0);pos=[cur.p0[0]+cur.dir[0]*cur.len*fr,cur.p0[1]+cur.dir[1]*cur.len*fr];}
+    const tp=bounces.filter(x=>x.b===b&&x.t<=now&&x.t>now-0.8).map(x=>[x.x,x.y]);tp.push(pos);
+    if(tp.length>1){cx.strokeStyle=hexa(COL[b],0.5);cx.lineWidth=2*f;cx.beginPath();tp.forEach((p,i)=>{const q=w2p(p[0],p[1]);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]);});cx.stroke();}
+    const q=w2p(pos[0],pos[1]);cx.fillStyle=CORE[b];cx.beginPath();cx.arc(q[0],q[1],6*f,0,7);cx.fill();}
+  for(const bo of bounces){const age=now-bo.t;if(age<0||age>=0.35)continue;const a=1-age/0.35,q=w2p(bo.x,bo.y);cx.fillStyle=hexa(COL[bo.b],0.4*a);cx.beginPath();cx.arc(q[0],q[1],28*a*f,0,7);cx.fill();cx.fillStyle=hexa(CORE[bo.b],a);cx.beginPath();cx.arc(q[0],q[1],5*f,0,7);cx.fill();}
+  // Birkhoff inset (in basso a sinistra)
+  const bw=S*0.42,bh=S*0.22,bx0=ox+6,by0=oy+S-bh-6;
+  cx.fillStyle="rgba(10,10,16,0.85)";cx.fillRect(bx0,by0,bw,bh);cx.strokeStyle="#333";cx.strokeRect(bx0,by0,bw,bh);
+  cx.strokeStyle="#2a2a34";cx.beginPath();cx.moveTo(bx0,by0+bh/2);cx.lineTo(bx0+bw,by0+bh/2);cx.stroke();
+  for(let b=0;b<3;b++){cx.fillStyle=COL[b];for(const pt of birk[b]){cx.beginPath();cx.arc(bx0+pt.s*bw,by0+(1-(pt.p+1)/2)*bh,1.4,0,7);cx.fill();}}
+  cx.fillStyle="#889";cx.font=(10*f)+"px sans-serif";cx.fillText("Birkhoff (s,p)",bx0+4,by0+12);
+  document.getElementById("info").textContent=`${running?"play":"PAUSA"} · root ${P.root} Hz`;
+}
+function hexa(c,a){return`rgba(${parseInt(c.slice(1,3),16)},${parseInt(c.slice(3,5),16)},${parseInt(c.slice(5,7),16)},${a})`;}
+draw();
+
+const $=id=>document.getElementById(id);
+function bindR(id,key,span,fix){const el=$(id);el.oninput=()=>{P[key]=parseFloat(el.value);if(span)$(span).textContent=P[key].toFixed(fix);if(key==="root")SCALE=scaleFreqs();if(key==="drive"&&started)shaper.curve=driveCurve(P.drive);if(key==="vol"&&started)volGain.gain.setTargetAtTime(P.vol,ac.currentTime,0.02);if((key==="wr"||key==="bpm")&&started)updateWob();};}
+bindR("scala","scala","vscala",2);bindR("eps","eps","veps",2);bindR("root","root","vroot",0);bindR("bpm","bpm","vbpm",0);bindR("wr","wr","vwr",1);bindR("drive","drive","vdrive",1);bindR("vol","vol","vvol",2);
+$("topo").onchange=e=>{P.topo=e.target.value;if(started)startClocks();};
+$("config").onchange=e=>{P.config=e.target.value;if(started)startClocks();};
+$("patA").onchange=e=>P.patA=e.target.value;$("patB").onchange=e=>P.patB=e.target.value;
+$("scale").onchange=e=>{P.steps=e.target.value.split(",").map(Number);SCALE=scaleFreqs();};
+$("wob").onchange=e=>{P.wob=e.target.checked;updateWob();};
+function buildBalls(){const box=$("balls");box.innerHTML="";for(let b=0;b<3;b++){const d=document.createElement("div");d.className="ball";d.style.borderColor=COL[b];
+  const lab=document.createElement("label");lab.className="blab";lab.textContent=T[LANG].ball+" "+(b+1);lab.style.color=COL[b];d.appendChild(lab);
+  const sel=document.createElement("select");WAVES.forEach(w=>{const o=document.createElement("option");o.textContent=w;if(w===balls[b].wave)o.selected=true;sel.appendChild(o);});sel.onchange=e=>balls[b].wave=e.target.value;d.appendChild(sel);
+  const oc=document.createElement("input");oc.type="range";oc.min=0.25;oc.max=2;oc.step=0.05;oc.value=balls[b].oct;oc.oninput=e=>balls[b].oct=parseFloat(e.target.value);d.appendChild(oc);
+  const sp=document.createElement("input");sp.type="range";sp.min=0.4;sp.max=5;sp.step=0.1;sp.value=balls[b].spd;sp.oninput=e=>balls[b].spd=parseFloat(e.target.value);d.appendChild(sp);box.appendChild(d);}}
+buildBalls();
+function play(){if(!started){initAudio();startClocks();started=true;$("hint").style.display="none";}ac.resume();running=true;mark();}
+function pause(){if(started){ac.suspend();running=false;mark();}}
+function restart(){if(started)startClocks();else initBalls();}
+function mark(){$("play").classList.toggle("on",running);$("pause").classList.toggle("on",!running);}
+$("play").onclick=play;$("pause").onclick=pause;$("restart").onclick=restart;$("lang").onclick=()=>setLang(LANG==="it"?"en":"it");
+initBalls();setInterval(scheduler,25);
+</script>
+</body>
+</html>

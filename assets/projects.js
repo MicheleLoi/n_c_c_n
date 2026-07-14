@@ -28,6 +28,9 @@ window.PROJECTS = [
     sims: [
       { id:"dj", title:"Biliardo DJ", file:"sim/dj.html",
         desc:"Sonificazione dal vivo delle traiettorie (audio + grafica)",
+        status:"online", year:2026 },
+      { id:"dj2", title:"Biliardo DJ · 3 palline", file:"sim/dj2.html",
+        desc:"Tre palline con strumenti, due basi ritmiche, wobble e pannello Birkhoff",
         status:"online", year:2026 }
     ]
   },
@@ -37,11 +40,15 @@ window.PROJECTS = [
     title: "PENDULUM",
     subtitle: "Oscillatori non lineari e biforcazioni",
     category: "DYNAMICAL SYSTEMS",
-    status: "standby",
+    status: "online",
     abstract:
       "Pendolo semplice, forzato e doppio. Ritratti di fase, sezioni di " +
       "Poincaré e transizione all'ordine caotico.",
-    sims: []   // <-- aggiungi qui le simulazioni quando pronte
+    sims: [
+      { id:"dj", title:"Pendolo DJ", file:"sim/dj.html",
+        desc:"Pendoli doppi caotici: spinta e forzante esterna, tre voci dagli angoli",
+        status:"online", year:2026 }
+    ]
   },
 
   {
@@ -49,10 +56,14 @@ window.PROJECTS = [
     title: "N-BODY PROBLEM",
     subtitle: "Dinamica gravitazionale a molti corpi",
     category: "DYNAMICAL SYSTEMS",
-    status: "standby",
+    status: "online",
     abstract:
       "Problema dei tre corpi e configurazioni periodiche. Integrazione " +
       "numerica e sonificazione delle orbite.",
-    sims: []
+    sims: [
+      { id:"dj", title:"N-body DJ", file:"sim/dj.html",
+        desc:"Gravità a N corpi: avvicinamenti sonori e un drone per corpo",
+        status:"online", year:2026 }
+    ]
   }
 ];

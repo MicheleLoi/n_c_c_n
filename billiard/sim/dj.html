@@ -29,42 +29,38 @@
   #hint { position: absolute; inset: 0; display: flex; align-items: center;
     justify-content: center; text-align: center; color: #667; font-size: 15px;
     pointer-events: none; }
-  .navback { display:block; margin:0 0 10px; color:#8cff8c; text-decoration:none;
-    font-size:12px; letter-spacing:.5px; }
-  .navback:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="panel">
-    <a class="navback" href="../">&larr; n_c_c_n / billiard</a>
     <h1>BILIARDO DJ · web</h1>
     <div class="row">
       <button id="play">▶ Play</button>
-      <button id="pause">‖ Pausa</button>
+      <button id="pause" data-t="pause">‖ Pausa</button>
       <button id="restart">⟳ Restart</button>
     </div>
     <hr>
-    <label>Config. iniziale</label>
+    <label data-t="lcfg">Config. iniziale</label>
     <select id="config">
       <option>diagonale</option><option>radente</option>
       <option>verticale</option><option>centro</option>
     </select>
-    <label>Topologia</label>
+    <label data-t="ltopo">Topologia</label>
     <select id="topo">
       <option>stadio</option><option>ellisse</option>
       <option>ovale</option><option>superellisse</option>
     </select>
-    <label>scalaBil (dimensione = ritmo) <span class="val" id="vScala">0.70</span></label>
+    <label data-t="lscala">scalaBil (dimensione = ritmo) <span class="val" id="vScala">0.70</span></label>
     <input type="range" id="scala" min="0.35" max="1.2" step="0.01" value="0.7">
-    <label>spd (velocità) <span class="val" id="vSpd">2.0</span></label>
+    <label data-t="lspd">spd (velocità) <span class="val" id="vSpd">2.0</span></label>
     <input type="range" id="spd" min="0.4" max="5" step="0.1" value="2">
-    <label>eps (solo ovale) <span class="val" id="vEps">0.30</span></label>
+    <label data-t="leps">eps (solo ovale) <span class="val" id="vEps">0.30</span></label>
     <input type="range" id="eps" min="0" max="0.45" step="0.01" value="0.3">
     <hr>
-    <label>root Hz <span class="val" id="vRoot">110</span></label>
+    <label data-t="lroot">root Hz <span class="val" id="vRoot">110</span></label>
     <input type="range" id="root" min="41" max="330" step="1" value="110">
-    <label>scala</label>
+    <label data-t="lscale">scala</label>
     <select id="scale">
       <option value="0,3,5,7,10">pentatonica min</option>
       <option value="0,2,4,7,9">pentatonica maj</option>
@@ -73,26 +69,27 @@
       <option value="0,1,3,5,7,8,10">frigio</option>
       <option value="0,1,2,3,4,5,6,7,8,9,10,11">cromatica</option>
     </select>
-    <label>ottava voce <span class="val" id="vOct">0.50</span></label>
+    <label data-t="loct">ottava voce <span class="val" id="vOct">0.50</span></label>
     <input type="range" id="oct" min="0.25" max="2" step="0.05" value="0.5">
     <hr>
-    <label>base ritmica</label>
+    <label data-t="lbase">base ritmica</label>
     <select id="pattern">
       <option>two-step</option><option>four</option><option>breakbeat</option>
       <option>punk</option><option>dubstep</option><option>halfstep</option>
     </select>
-    <label>bpm <span class="val" id="vBpm">150</span></label>
+    <label data-t="lbpm">bpm <span class="val" id="vBpm">150</span></label>
     <input type="range" id="bpm" min="80" max="185" step="1" value="150">
-    <label>drive (distorsione) <span class="val" id="vDrive">1.2</span></label>
+    <label data-t="ldrive">drive (distorsione) <span class="val" id="vDrive">1.2</span></label>
     <input type="range" id="drive" min="1" max="6" step="0.1" value="1.2">
-    <label>volume <span class="val" id="vVol">0.8</span></label>
+    <label data-t="lvol">volume <span class="val" id="vVol">0.8</span></label>
     <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8">
     <hr>
     <div id="info" style="color:#778;font-size:11px"></div>
   </div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="hint">Premi ▶ Play per avviare l'audio</div>
+    <button id="lang" style="position:absolute;top:8px;right:8px;padding:4px 10px;background:#1c1c2a;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:6px;cursor:pointer">EN</button>
+    <div id="hint" data-t="hint">Premi ▶ Play per avviare l'audio</div>
   </div>
 </div>
 <script>
@@ -296,6 +293,16 @@ function markBtns(){ $("play").classList.toggle("on",running); $("pause").classL
 $("play").onclick=play; $("pause").onclick=pause; $("restart").onclick=restart;
 setInterval(scheduler,25);
 initBall();
+
+// ---------- bilingue IT/EN ----------
+const T={it:{pause:"‖ Pausa",lcfg:"Config. iniziale",ltopo:"Topologia",lscala:"scalaBil (dimensione = ritmo)",lspd:"spd (velocità)",leps:"eps (solo ovale)",lroot:"root Hz",lscale:"scala",loct:"ottava voce",lbase:"base ritmica",lbpm:"bpm",ldrive:"drive (distorsione)",lvol:"volume",hint:"Premi ▶ Play per avviare l'audio"},
+ en:{pause:"‖ Pause",lcfg:"Start config",ltopo:"Topology",lscala:"scalaBil (size = rhythm)",lspd:"spd (speed)",leps:"eps (oval only)",lroot:"root Hz",lscale:"scale",loct:"voice octave",lbase:"drum base",lbpm:"bpm",ldrive:"drive (distortion)",lvol:"volume",hint:"Press ▶ Play to start audio"}};
+let LANG=localStorage.getItem("lang")||"it";
+function setLang(l){LANG=l;localStorage.setItem("lang",l);document.documentElement.lang=l;
+  document.querySelectorAll("[data-t]").forEach(e=>{const k=e.getAttribute("data-t"),t=T[l][k];if(t===undefined)return;const v=e.querySelector(".val");if(v){e.textContent=t+" ";e.appendChild(v);}else e.textContent=t;});
+  $("lang").textContent=l==="it"?"EN":"IT";}
+$("lang").onclick=()=>setLang(LANG==="it"?"en":"it");
+setLang(LANG);
 </script>
 </body>
 </html>

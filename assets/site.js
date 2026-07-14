@@ -52,7 +52,7 @@
 
   function scrHead(right){
     var h = el('div','scr-head');
-    h.innerHTML = '<span><b>'+HOST+'</b>@workstation :: scientific computing lab</span>'+
+    h.innerHTML = '<span><b>'+HOST+'</b>@chaosjazz :~ live sonification</span>'+
                   '<span>'+right+'</span>';
     return h;
   }
@@ -141,12 +141,12 @@
       ' _ __     ___    ___    _ __  \n'+
       '| \'_ \\   / __|  / __|  | \'_ \\ \n'+
       '| | | | | (__  | (__   | | | |\n'+
-      '|_| |_|  \\___|  \\___|  |_| |_|   <span class="tag">scientific workstation</span>\n'+
+      '|_| |_|  \\___|  \\___|  |_| |_|   <span class="tag">ChaoticJazzStation</span>\n'+
       '</pre>';
     crt.appendChild(banner);
     crt.appendChild(el('div','subtitle',
-      'Modelli matematici interattivi &mdash; dinamica, caos e sonificazione. '+
-      'Seleziona un modulo.'));
+      'sistemi dinamici, caos e sonificazione &mdash; suonati dal vivo nel browser. '+
+      'seleziona un modulo.'));
 
     crt.appendChild(el('div','sec','MODULES'));
 
@@ -220,6 +220,13 @@
       var ab = el('div','content');
       ab.innerHTML = '<p>'+esc(p.abstract)+'</p>';
       c.crt.appendChild(ab);
+    }
+
+    if(p.math){
+      c.crt.appendChild(el('div','sec','MATH · STORIA'));
+      var mb = el('div','content');
+      mb.innerHTML = '<p>'+esc(p.math)+'</p>';
+      c.crt.appendChild(mb);
     }
 
     var sims = (p.sims||[]);

@@ -36,13 +36,7 @@
 
 html,body{
   margin:0; min-height:100%;
-  background:var(--desk);
-  /* faint NeXT-style stipple + grid so the "desktop" isn't flat */
-  background-image:
-    radial-gradient(rgba(255,255,255,.020) 1px, transparent 1px),
-    linear-gradient(var(--desk-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--desk-line) 1px, transparent 1px);
-  background-size: 3px 3px, 48px 48px, 48px 48px;
+  background:#040d08;
   color:var(--p-mid);
   font-family:var(--mono);
   font-size:15px;
@@ -50,34 +44,15 @@ html,body{
   -webkit-font-smoothing:none;
 }
 
-/* ---- Workstation chassis / bezel ---------------------------- */
+/* ---- terminale a tutta pagina, senza cornice ---------------- */
 .ws{
-  max-width:960px;
-  margin:34px auto;
-  padding:14px;
-  background:
-    linear-gradient(160deg,#3c3c36,#2b2b26 60%,#232320);
-  border-radius:10px;
-  border-top:1px solid var(--bezel-hi);
-  border-left:1px solid var(--bezel-hi);
-  border-right:1px solid var(--bezel-lo);
-  border-bottom:1px solid var(--bezel-lo);
-  box-shadow:var(--shadow),
-             inset 1px 1px 0 rgba(255,255,255,.06),
-             inset -2px -2px 0 rgba(0,0,0,.35);
+  max-width:900px;
+  margin:0 auto;
+  padding:20px 20px 44px;
 }
 
-/* NeXT-style titlebar */
-.ws__bar{
-  display:flex; align-items:center; gap:10px;
-  height:26px; padding:0 8px; margin-bottom:12px;
-  background:linear-gradient(#4a4a44,#33332e);
-  border-top:1px solid var(--bezel-hi);
-  border-left:1px solid var(--bezel-hi);
-  border-right:1px solid var(--bezel-lo);
-  border-bottom:1px solid var(--bezel-lo);
-  color:#d7d7cc; font-size:12px; letter-spacing:.5px;
-}
+/* niente barra-finestra: siamo un terminale, non una workstation */
+.ws__bar{ display:none; }
 .ws__leds{ display:flex; gap:6px; }
 .ws__led{ width:9px; height:9px; border-radius:50%;
   border:1px solid rgba(0,0,0,.5); box-shadow:inset 0 0 2px rgba(255,255,255,.4); }
@@ -90,32 +65,21 @@ html,body{
 /* ---- CRT screen --------------------------------------------- */
 .crt{
   position:relative;
-  background:
-    radial-gradient(120% 130% at 50% 0%, #0a1a10 0%, var(--scr-bg) 60%, #020805 100%);
-  border-radius:8px;
-  padding:26px 30px 22px;
-  min-height:420px;
-  box-shadow:inset 0 0 60px rgba(0,0,0,.9),
-             inset 0 0 3px rgba(120,255,170,.25),
-             0 0 0 2px #0c0c0a;
-  overflow:hidden;
-  text-shadow:0 0 4px rgba(90,255,150,.35);
+  background:transparent;
+  padding:14px 2px 8px;
+  overflow:visible;
+  text-shadow:0 0 4px rgba(90,255,150,.30);
 }
-/* scanlines */
+/* scanlines leggere (fisse allo schermo) */
 .crt::before{
-  content:""; position:absolute; inset:0; pointer-events:none; z-index:5;
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:5;
   background:repeating-linear-gradient(
-    to bottom, rgba(0,0,0,.00) 0, rgba(0,0,0,.00) 1px,
-    rgba(0,0,0,.26) 2px, rgba(0,0,0,.26) 3px);
+    to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
+    rgba(0,0,0,.14) 3px, rgba(0,0,0,.14) 4px);
   mix-blend-mode:multiply;
-  animation:crt-flicker 5.5s infinite steps(60);
+  animation:crt-flicker 6s infinite steps(60);
 }
-/* vignette + faint scan glow */
-.crt::after{
-  content:""; position:absolute; inset:0; pointer-events:none; z-index:6;
-  background:radial-gradient(130% 120% at 50% 50%,
-             transparent 55%, rgba(0,0,0,.55) 100%);
-}
+.crt::after{ content:none; }
 @keyframes crt-flicker{
   0%,97%,100%{ opacity:1; } 98%{ opacity:.86; } 99%{ opacity:.94; }
 }

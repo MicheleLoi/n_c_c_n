@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biliardo DJ - web</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #06060a; color: #d8d8e0;
+    font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #app { display: flex; height: 100%; }
+  #panel { width: 250px; flex: 0 0 250px; padding: 12px; overflow-y: auto;
+    background: #0d0d14; border-right: 1px solid #1c1c28; }
+  #stage { flex: 1; position: relative; }
+  canvas { display: block; width: 100%; height: 100%; }
+  h1 { font-size: 15px; margin: 0 0 10px; letter-spacing: .5px; }
+  .row { display: flex; gap: 6px; margin-bottom: 10px; }
+  button { flex: 1; padding: 7px 4px; background: #1c1c2a; color: #d8d8e0;
+    border: 1px solid #2a2a3a; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  button:hover { background: #262636; }
+  button.on { background: #2b4; color: #041; border-color: #2b4; }
+  label { display: block; margin: 8px 0 2px; color: #9a9ab0; font-size: 11px; }
+  input[type=range] { width: 100%; }
+  select { width: 100%; padding: 4px; background: #14141e; color: #d8d8e0;
+    border: 1px solid #2a2a3a; border-radius: 5px; }
+  hr { border: none; border-top: 1px solid #1c1c28; margin: 12px 0; }
+  .val { float: right; color: #d8d8e0; }
+  #hint { position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; text-align: center; color: #667; font-size: 15px;
+    pointer-events: none; }
+  .navback { display:block; margin:0 0 10px; color:#8cff8c; text-decoration:none;
+    font-size:12px; letter-spacing:.5px; }
+  .navback:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <a class="navback" href="../">&larr; n_c_c_n / billiard</a>
+    <h1>BILIARDO DJ · web</h1>
+    <div class="row">
+      <button id="play">▶ Play</button>
+      <button id="pause">‖ Pausa</button>
+      <button id="restart">⟳ Restart</button>
+    </div>
+    <hr>
+    <label>Config. iniziale</label>
+    <select id="config">
+      <option>diagonale</option><option>radente</option>
+      <option>verticale</option><option>centro</option>
+    </select>
+    <label>Topologia</label>
+    <select id="topo">
+      <option>stadio</option><option>ellisse</option>
+      <option>ovale</option><option>superellisse</option>
+    </select>
+    <label>scalaBil (dimensione = ritmo) <span class="val" id="vScala">0.70</span></label>
+    <input type="range" id="scala" min="0.35" max="1.2" step="0.01" value="0.7">
+    <label>spd (velocità) <span class="val" id="vSpd">2.0</span></label>
+    <input type="range" id="spd" min="0.4" max="5" step="0.1" value="2">
+    <label>eps (solo ovale) <span class="val" id="vEps">0.30</span></label>
+    <input type="range" id="eps" min="0" max="0.45" step="0.01" value="0.3">
+    <hr>
+    <label>root Hz <span class="val" id="vRoot">110</span></label>
+    <input type="range" id="root" min="41" max="330" step="1" value="110">
+    <label>scala</label>
+    <select id="scale">
+      <option value="0,3,5,7,10">pentatonica min</option>
+      <option value="0,2,4,7,9">pentatonica maj</option>
+      <option value="0,2,3,5,7,8,10">minore natur.</option>
+      <option value="0,2,3,5,7,9,10">dorico</option>
+      <option value="0,1,3,5,7,8,10">frigio</option>
+      <option value="0,1,2,3,4,5,6,7,8,9,10,11">cromatica</option>
+    </select>
+    <label>ottava voce <span class="val" id="vOct">0.50</span></label>
+    <input type="range" id="oct" min="0.25" max="2" step="0.05" value="0.5">
+    <hr>
+    <label>base ritmica</label>
+    <select id="pattern">
+      <option>two-step</option><option>four</option><option>breakbeat</option>
+      <option>punk</option><option>dubstep</option><option>halfstep</option>
+    </select>
+    <label>bpm <span class="val" id="vBpm">150</span></label>
+    <input type="range" id="bpm" min="80" max="185" step="1" value="150">
+    <label>drive (distorsione) <span class="val" id="vDrive">1.2</span></label>
+    <input type="range" id="drive" min="1" max="6" step="0.1" value="1.2">
+    <label>volume <span class="val" id="vVol">0.8</span></label>
+    <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8">
+    <hr>
+    <div id="info" style="color:#778;font-size:11px"></div>
+  </div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hint">Premi ▶ Play per avviare l'audio</div>
+  </div>
+</div>
+<script>
+"use strict";
+// ---------- parametri (letti dai controlli) ----------
+const P = { topo:"stadio", scala:0.7, spd:2, eps:0.3, root:110, nOtt:2,
+  steps:[0,3,5,7,10], oct:0.5, pattern:"two-step", bpm:150, drive:1.2, vol:0.8,
+  config:"diagonale" };
+const BASE_SPEED = 3.0, VIEW = 1.6, pExp = 0.9;
+const PATTERNS = {
+  "two-step":{k:[0,10],s:[8],h:[0,2,4,6,8,10,12,14]},
+  "four":{k:[0,4,8,12],s:[4,12],h:[2,6,10,14]},
+  "breakbeat":{k:[0,10,11],s:[4,12,14],h:[0,2,4,6,8,10,12,14]},
+  "punk":{k:[0,4,8,12],s:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+  "dubstep":{k:[0],s:[8],h:[0,4,8,12],o:[6,14]},
+  "halfstep":{k:[0,6],s:[8],h:[0,4,8,12]}
+};
+
+// ---------- fisica del biliardo ----------
+function Fimp0(x,y){
+  switch(P.topo){
+    case "ellisse": return (x/1.35)**2 + (y/0.85)**2 - 1;
+    case "ovale": return Math.hypot(x,y) - (1 + P.eps*Math.cos(Math.atan2(y,x)));
+    case "superellisse": return Math.abs(x/1.20)**4 + Math.abs(y/0.90)**4 - 1;
+    case "stadio": { const cx = Math.max(-0.70, Math.min(0.70, x)); return Math.hypot(x-cx, y) - 0.90; }
+    default: return Math.hypot(x,y) - 1;
+  }
+}
+function Fimp(x,y){ const s=P.scala; return Fimp0(x/s, y/s); }
+function normal(x,y){ const h=1e-4;
+  let gx=Fimp(x+h,y)-Fimp(x-h,y), gy=Fimp(x,y+h)-Fimp(x,y-h);
+  const n=Math.hypot(gx,gy)||1; return [gx/n, gy/n];
+}
+function rayExit(Px,Py,dx,dy){
+  const N=500, tmax=4.0; let pF=Fimp(Px+1e-5*dx,Py+1e-5*dy), pT=1e-5;
+  for(let i=1;i<=N;i++){ const t=1e-5+(tmax-1e-5)*i/N, f=Fimp(Px+t*dx,Py+t*dy);
+    if(pF<0 && f>=0){ let lo=pT,hi=t; for(let k=0;k<40;k++){const m=.5*(lo+hi);
+      if(Fimp(Px+m*dx,Py+m*dy)<0)lo=m; else hi=m;} return .5*(lo+hi); }
+    pF=f; pT=t; }
+  return null;
+}
+function boundaryPts(){ const a=[]; for(let i=0;i<=220;i++){ const q=2*Math.PI*i/220;
+  const t=rayExit(0,0,Math.cos(q),Math.sin(q)); if(t)a.push([t*Math.cos(q),t*Math.sin(q)]); }
+  if(a.length)a.push(a[0]); return a; }
+let bnd=[], bndSig="";
+function refreshBnd(){ const sig=P.topo+P.scala.toFixed(3)+P.eps.toFixed(3);
+  if(sig!==bndSig){ bnd=boundaryPts(); bndSig=sig; } }
+
+// ---------- stato pallina ----------
+const ball = { P:[0.03,-0.02], d:[1,0] };
+let segs=[], bounces=[], seg=null;
+function initBall(){
+  let ang;
+  if(P.config==="radente"){ ball.P=[0,0.30]; ang=3; }
+  else if(P.config==="verticale"){ ball.P=[0.02,-0.05]; ang=90; }
+  else if(P.config==="centro"){ ball.P=[0,0]; ang=37; }
+  else { ball.P=[0.03,-0.02]; ang=37; }
+  const r=ang*Math.PI/180; ball.d=[Math.cos(r),Math.sin(r)];
+}
+function ballExit(){ let t=rayExit(ball.P[0],ball.P[1],ball.d[0],ball.d[1]);
+  if(t===null){ ball.P=[0,0]; t=rayExit(0,0,ball.d[0],ball.d[1])||1.0; } return t; }
+function newSegment(t0){ const len=ballExit(), flight=len/(BASE_SPEED*P.spd);
+  const hit=[ball.P[0]+len*ball.d[0], ball.P[1]+len*ball.d[1]];
+  seg={t0,t1:t0+flight,p0:ball.P.slice(),dir:ball.d.slice(),len,hit}; segs.push(seg); }
+
+// ---------- audio ----------
+let ac=null, bus=null, shaper=null, volGain=null, noiseBuf=null;
+let stepIdx=0, nextStep=0, running=false, started=false;
+function scaleFreqs(){ const a=[]; for(let o=0;o<=P.nOtt;o++) for(const s of P.steps)
+  a.push(P.root*Math.pow(2,o+s/12)); a.sort((x,y)=>x-y); return a; }
+let SCALE=scaleFreqs();
+function snap(u){ const i=Math.round(1+u*(SCALE.length-1))-1;
+  return SCALE[Math.min(Math.max(i,0),SCALE.length-1)]; }
+function driveCurve(dr){ const n=1024,c=new Float32Array(n),k=Math.max(1.0001,dr),th=Math.tanh(k);
+  for(let i=0;i<n;i++){const x=(i/(n-1))*2-1; c[i]=Math.tanh(k*x)/th;} return c; }
+function makeNoise(){ const n=ac.sampleRate*0.3, b=ac.createBuffer(1,n,ac.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1; return b; }
+
+function initAudio(){
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  bus=ac.createGain(); bus.gain.value=1;
+  shaper=ac.createWaveShaper(); shaper.curve=driveCurve(P.drive);
+  volGain=ac.createGain(); volGain.gain.value=P.vol;
+  bus.connect(shaper); shaper.connect(volGain); volGain.connect(ac.destination);
+  noiseBuf=makeNoise();
+}
+function noteAt(time, freq, amp){
+  const g=ac.createGain();
+  g.gain.setValueAtTime(0.0001,time);
+  g.gain.linearRampToValueAtTime(amp,time+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+0.35);
+  g.connect(bus);
+  const hg=[1,0.35,0.12];
+  for(let h=1;h<=3;h++){ const o=ac.createOscillator(); o.type="sine";
+    o.frequency.setValueAtTime(freq*h,time);
+    const gg=ac.createGain(); gg.gain.value=hg[h-1]*0.28; o.connect(gg); gg.connect(g);
+    o.start(time); o.stop(time+0.4); }
+}
+function kickAt(t){ const o=ac.createOscillator(),g=ac.createGain();
+  o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12);
+  g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.25);
+  o.connect(g); g.connect(bus); o.start(t); o.stop(t+0.3); }
+function noiseAt(t,dur,hp,amp,tone){ const s=ac.createBufferSource(); s.buffer=noiseBuf;
+  const f=ac.createBiquadFilter(); f.type="highpass"; f.frequency.value=hp;
+  const g=ac.createGain(); g.gain.setValueAtTime(amp,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(bus); s.start(t); s.stop(t+dur+0.02);
+  if(tone){ const o=ac.createOscillator(),og=ac.createGain(); o.frequency.value=tone;
+    og.gain.setValueAtTime(amp*0.5,t); og.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(og); og.connect(bus); o.start(t); o.stop(t+dur+0.02); } }
+
+function scheduler(){
+  if(!started || !running || ac.state!=="running") return;
+  const ahead = ac.currentTime + 0.12;
+  let guard=0;
+  while(seg.t1 < ahead && guard++<300){
+    const hp=seg.hit, nrm=normal(hp[0],hp[1]);
+    const inc=Math.abs(seg.dir[0]*nrm[0]+seg.dir[1]*nrm[1]);
+    let s=Math.atan2(hp[1],hp[0]); s=((s%(2*Math.PI))+2*Math.PI)%(2*Math.PI); s/=2*Math.PI;
+    noteAt(seg.t1, snap(Math.pow(s,pExp))*P.oct, 0.30+0.70*inc);
+    bounces.push({t:seg.t1,x:hp[0],y:hp[1]});
+    const dn=seg.dir[0]*nrm[0]+seg.dir[1]*nrm[1];
+    ball.d=[seg.dir[0]-2*dn*nrm[0], seg.dir[1]-2*dn*nrm[1]]; ball.P=hp;
+    newSegment(seg.t1);
+  }
+  const pat=PATTERNS[P.pattern], sixt=60/P.bpm/4; let g2=0;
+  while(nextStep < ahead && g2++<200){
+    const s16=stepIdx%16, t=nextStep;
+    if(pat.k&&pat.k.includes(s16)) kickAt(t);
+    if(pat.s&&pat.s.includes(s16)) noiseAt(t,0.12,1200,0.6,190);
+    if(pat.h&&pat.h.includes(s16)) noiseAt(t,0.04,7000,0.25,0);
+    if(pat.o&&pat.o.includes(s16)) noiseAt(t,0.14,6000,0.25,0);
+    stepIdx++; nextStep+=sixt;
+  }
+  // pulizia
+  const cut=ac.currentTime-2;
+  segs=segs.filter(s=>s.t1>cut); bounces=bounces.filter(b=>b.t>cut);
+}
+
+function startClocks(){ const now=ac.currentTime; segs=[]; bounces=[]; initBall();
+  newSegment(now); stepIdx=0; nextStep=now; }
+
+// ---------- disegno ----------
+const cv=document.getElementById("cv"), cx=cv.getContext("2d");
+function draw(){
+  requestAnimationFrame(draw);
+  const w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+  cx.fillStyle="#06060a"; cx.fillRect(0,0,w,h);
+  refreshBnd();
+  const S=Math.min(w,h), ox=(w-S)/2, oy=(h-S)/2;
+  const w2p=(x,y)=>[ox+(x+VIEW)/(2*VIEW)*S, oy+(VIEW-y)/(2*VIEW)*S];
+  // bordo
+  cx.strokeStyle="#3a3a48"; cx.lineWidth=1; cx.beginPath();
+  bnd.forEach((p,i)=>{const q=w2p(p[0],p[1]); i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]);}); cx.stroke();
+  if(!started){ return; }
+  const now=ac.currentTime;
+  // posizione pallina
+  let cur=null; for(const s of segs){ if(s.t0<=now && now<s.t1){cur=s;break;} }
+  let pos=ball.P;
+  if(cur){ const f=(now-cur.t0)/(cur.t1-cur.t0);
+    pos=[cur.p0[0]+cur.dir[0]*cur.len*f, cur.p0[1]+cur.dir[1]*cur.len*f]; }
+  // scia: rimbalzi negli ultimi 0.8 s + posizione attuale
+  const tS=0.8, pts=bounces.filter(b=>b.t<=now && b.t>now-tS).map(b=>[b.x,b.y]); pts.push(pos);
+  if(pts.length>1){ cx.strokeStyle="rgba(255,140,40,0.55)"; cx.lineWidth=2; cx.beginPath();
+    pts.forEach((p,i)=>{const q=w2p(p[0],p[1]); i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]);}); cx.stroke(); }
+  // lampi
+  for(const b of bounces){ const age=now-b.t; if(age<0||age>=0.35)continue;
+    const a=1-age/0.35, q=w2p(b.x,b.y);
+    cx.fillStyle=`rgba(255,140,40,${0.28*a})`; cx.beginPath(); cx.arc(q[0],q[1],26*a,0,7); cx.fill();
+    cx.fillStyle=`rgba(255,235,170,${0.95*a})`; cx.beginPath(); cx.arc(q[0],q[1],6,0,7); cx.fill(); }
+  // pallina
+  const q=w2p(pos[0],pos[1]); cx.fillStyle="#ffe1a0"; cx.beginPath(); cx.arc(q[0],q[1],7,0,7); cx.fill();
+  document.getElementById("info").textContent=
+    `${running?"play":"PAUSA"} · rimbalzi ~${(BASE_SPEED*P.spd/Math.max(seg.len,1e-6)).toFixed(1)}/s · root ${P.root} Hz`;
+}
+draw();
+
+// ---------- controlli ----------
+const $=id=>document.getElementById(id);
+function bindRange(id,key,span,fix){ const el=$(id); el.oninput=()=>{ P[key]=parseFloat(el.value);
+  if(span)$(span).textContent=P[key].toFixed(fix); onParam(key); }; }
+bindRange("scala","scala","vScala",2); bindRange("spd","spd","vSpd",1);
+bindRange("eps","eps","vEps",2); bindRange("root","root","vRoot",0);
+bindRange("oct","oct","vOct",2); bindRange("bpm","bpm","vBpm",0);
+bindRange("drive","drive","vDrive",1); bindRange("vol","vol","vVol",2);
+$("topo").onchange=e=>{ P.topo=e.target.value; restart(); };
+$("config").onchange=e=>{ P.config=e.target.value; restart(); };
+$("pattern").onchange=e=>{ P.pattern=e.target.value; };
+$("scale").onchange=e=>{ P.steps=e.target.value.split(",").map(Number); SCALE=scaleFreqs(); };
+function onParam(key){
+  if(!started) return;
+  if(key==="root") SCALE=scaleFreqs();
+  if(key==="drive") shaper.curve=driveCurve(P.drive);
+  if(key==="vol") volGain.gain.setTargetAtTime(P.vol, ac.currentTime, 0.02);
+}
+function play(){ if(!started){ initAudio(); startClocks(); started=true; $("hint").style.display="none"; }
+  ac.resume(); running=true; markBtns(); }
+function pause(){ if(started){ ac.suspend(); running=false; markBtns(); } }
+function restart(){ if(!started){ initBall(); return; } startClocks(); }
+function markBtns(){ $("play").classList.toggle("on",running); $("pause").classList.toggle("on",!running); }
+$("play").onclick=play; $("pause").onclick=pause; $("restart").onclick=restart;
+setInterval(scheduler,25);
+initBall();
+</script>
+</body>
+</html>

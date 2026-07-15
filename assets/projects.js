@@ -20,11 +20,15 @@ window.PROJECTS = [
     id: "billiard",
     title: "BILLIARD DYNAMICS",
     subtitle: "Biliardi caotici e sonificazione in tempo reale",
+    subtitle_en: "Chaotic billiards and real-time sonification",
     category: "DYNAMICAL SYSTEMS",
     status: "online",
     abstract:
       "Traiettorie in biliardi convessi e a stadio: da regolari a caotiche. " +
       "Ogni rimbalzo genera una nota; la geometria diventa musica.",
+    abstract_en:
+      "Trajectories in convex and stadium billiards: from regular to chaotic. " +
+      "Every bounce generates a note; the geometry becomes music.",
     math:
       "Un biliardo matematico e' una particella che si muove in linea retta e " +
       "rimbalza in modo speculare (angolo di incidenza = angolo di riflessione) sul " +
@@ -35,12 +39,23 @@ window.PROJECTS = [
       "Ogni rimbalzo si descrive con due numeri: la posizione s lungo il bordo e la " +
       "componente tangenziale p della velocita' — la mappa di Birkhoff (s,p), che qui " +
       "diventa altezza della nota e accento.",
+    math_en:
+      "A mathematical billiard is a particle moving in a straight line and reflecting " +
+      "specularly (angle of incidence = angle of reflection) off the boundary of a " +
+      "planar region. Introduced by G. D. Birkhoff (1927), they are the simplest model " +
+      "of the order->chaos transition: in a circle or ellipse the motion is integrable " +
+      "(there is a conserved quantity besides energy), while in the Bunimovich stadium " +
+      "(1974) it is fully chaotic and ergodic. Each bounce is described by two numbers: " +
+      "the position s along the boundary and the tangential component p of the velocity " +
+      "— the Birkhoff map (s,p), which here becomes note pitch and accent.",
     sims: [
-      { id:"dj", title:"Biliardo DJ", file:"sim/dj.html",
+      { id:"dj", title:"Biliardo DJ", title_en:"Billiard DJ", file:"sim/dj.html",
         desc:"Sonificazione dal vivo delle traiettorie (audio + grafica)",
+        desc_en:"Live sonification of the trajectories (audio + graphics)",
         status:"online", year:2026 },
-      { id:"dj2", title:"Biliardo DJ · 3 palline", file:"sim/dj2.html",
+      { id:"dj2", title:"Biliardo DJ · 3 palline", title_en:"Billiard DJ · 3 balls", file:"sim/dj2.html",
         desc:"Tre palline con strumenti, due basi ritmiche, wobble e pannello Birkhoff",
+        desc_en:"Three balls with instruments, two drum bases, wobble and a Birkhoff panel",
         status:"online", year:2026 }
     ]
   },
@@ -49,11 +64,15 @@ window.PROJECTS = [
     id: "pendulum",
     title: "PENDULUM",
     subtitle: "Oscillatori non lineari e biforcazioni",
+    subtitle_en: "Nonlinear oscillators and bifurcations",
     category: "DYNAMICAL SYSTEMS",
     status: "online",
     abstract:
       "Pendolo semplice, forzato e doppio. Ritratti di fase, sezioni di " +
       "Poincaré e transizione all'ordine caotico.",
+    abstract_en:
+      "Simple, driven and double pendulum. Phase portraits, Poincaré " +
+      "sections and the transition to chaos.",
     math:
       "Il pendolo doppio e' un'asta appesa a un'altra asta, sotto gravita'. Le sue " +
       "equazioni del moto si ricavano dalla meccanica di Lagrange (fine '700) e " +
@@ -62,9 +81,18 @@ window.PROJECTS = [
       "divergono in modo esponenziale (esponente di Lyapunov positivo). E' l'esempio " +
       "da manuale di sensibilita' alle condizioni iniziali — il classico 'effetto " +
       "farfalla'. Qui i passaggi degli angoli dal punto piu' basso generano le note.",
+    math_en:
+      "The double pendulum is a rod hanging from another rod, under gravity. Its " +
+      "equations of motion follow from Lagrangian mechanics (late 1700s) and involve " +
+      "two angles. The system is deterministic but NOT integrable: above a certain " +
+      "energy it becomes chaotic, and two nearby initial conditions diverge " +
+      "exponentially (positive Lyapunov exponent). It is the textbook example of " +
+      "sensitivity to initial conditions — the classic 'butterfly effect'. Here the " +
+      "arms passing through the lowest point generate the notes.",
     sims: [
-      { id:"dj", title:"Pendolo DJ", file:"sim/dj.html",
+      { id:"dj", title:"Pendolo DJ", title_en:"Pendulum DJ", file:"sim/dj.html",
         desc:"Pendoli doppi caotici: spinta e forzante esterna, tre voci dagli angoli",
+        desc_en:"Chaotic double pendulums: impulse and external drive, three voices from the angles",
         status:"online", year:2026 }
     ]
   },
@@ -73,11 +101,15 @@ window.PROJECTS = [
     id: "nbp",
     title: "N-BODY PROBLEM",
     subtitle: "Dinamica gravitazionale a molti corpi",
+    subtitle_en: "Gravitational dynamics of many bodies",
     category: "DYNAMICAL SYSTEMS",
     status: "online",
     abstract:
       "Problema dei tre corpi e configurazioni periodiche. Integrazione " +
       "numerica e sonificazione delle orbite.",
+    abstract_en:
+      "The three-body problem and periodic configurations. Numerical " +
+      "integration and sonification of the orbits.",
     math:
       "Il problema degli N corpi chiede il moto di N masse che si attraggono per la " +
       "sola gravita' di Newton (1687). Per N=2 e' risolto esattamente (le orbite di " +
@@ -86,9 +118,18 @@ window.PROJECTS = [
       "periodiche notevoli: i punti di Lagrange e la celebre orbita a 'figura-otto' di " +
       "Chenciner–Montgomery (2000). Qui l'integrazione e' numerica con una gravita' " +
       "ammorbidita; gli avvicinamenti ravvicinati tra i corpi diventano note.",
+    math_en:
+      "The N-body problem asks for the motion of N masses attracting each other " +
+      "through Newtonian gravity alone (1687). For N=2 it is solved exactly (Kepler " +
+      "orbits); for N>=3 H. Poincaré (1890) proved there is no general formula and thus " +
+      "discovered deterministic chaos. Yet remarkable periodic solutions remain: the " +
+      "Lagrange points and the famous 'figure-eight' orbit of Chenciner–Montgomery " +
+      "(2000). Here the integration is numerical with softened gravity; the close " +
+      "approaches between bodies become notes.",
     sims: [
-      { id:"dj", title:"N-body DJ", file:"sim/dj.html",
+      { id:"dj", title:"N-body DJ", title_en:"N-body DJ", file:"sim/dj.html",
         desc:"Gravità a N corpi: avvicinamenti sonori e un drone per corpo",
+        desc_en:"N-body gravity: sonified close approaches and a drone per body",
         status:"online", year:2026 }
     ]
   }

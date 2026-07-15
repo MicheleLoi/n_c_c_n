@@ -168,11 +168,27 @@ a.link:hover{ text-decoration:underline; text-shadow:0 0 6px var(--cyan); }
 .content{ max-width:70ch; }
 .content .kv{ color:var(--p-dim); } .content .kv b{ color:var(--p-bright); }
 
+/* tasto lingua IT/EN (fisso in alto a destra) */
+.langbtn{
+  position:fixed; top:8px; right:8px; z-index:30;
+  background:#0b1a10; color:var(--cyan);
+  border:1px solid var(--p-dim); border-radius:4px;
+  padding:5px 12px; cursor:pointer; font:inherit; font-size:12px;
+  text-shadow:0 0 5px rgba(90,255,150,.35);
+}
+.langbtn:hover{ color:var(--p-bright); border-color:var(--p-mid); }
+
 @media (max-width:640px){
-  body{ font-size:14px; }
-  .ws{ margin:10px; padding:8px; }
-  .crt{ padding:18px 16px; }
-  .menu a{ flex-wrap:wrap; }
+  body{ font-size:13px; }
+  .ws{ margin:0; padding:12px 12px 34px; }
+  .crt{ padding:8px 2px; }
+  .banner pre{ font-size:11px; }
+  .subtitle{ font-size:12px; }
+  .sec{ letter-spacing:1px; }
+  .sec::after{ content:" ────"; }
+  .scr-head,.scr-foot{ flex-wrap:wrap; gap:4px; }
+  .menu a{ flex-wrap:wrap; padding:9px 8px; }
+  .menu a .num{ width:1.8em; }
   .menu a .name{ min-width:0; }
-  .menu a .desc{ flex-basis:100%; }
+  .menu a .desc{ flex-basis:100%; margin-top:2px; }
 }

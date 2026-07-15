@@ -19,29 +19,49 @@
       <div class="scr-head"><span><b>nccn</b>@chaosjazz :~ live sonification</span><span>about</span></div>
       <div class="banner"><pre>ABOUT / COLOPHON</pre></div>
       <div class="content">
-        <p><b>n_c_c_n</b> &mdash; <span class="amber">ChaoticJazzStation</span> &mdash; e&#39; un set di
-        modelli matematici che si <b>ascoltano</b>: sistemi dinamici e caos deterministico
-        trasformati in suono, da suonare dal vivo come strumenti.</p>
-
+        <p data-t="p1"></p>
         <hr>
-        <p class="dim">// pipeline</p>
-        <p class="kv"><b>1 · Mathematica</b> &mdash; primi prototipi: si integra il sistema
-        (NDSolve / mappe) e si sonifica lo stato, con export WAV + MP4. Offline: si rende un file.</p>
-        <p class="kv"><b>2 · Python</b> &mdash; passaggio al tempo reale: fisica in NumPy, audio a
-        bassa latenza con <span class="amber">sounddevice</span>, manopole live con Dear PyGui.</p>
-        <p class="kv"><b>3 · HTML</b> &mdash; porting nel browser con <span class="amber">Web Audio +
-        Canvas</span>: niente installazione, si apre con un link. E&#39; quello che stai usando.</p>
-
+        <p class="dim" data-t="pipe"></p>
+        <p class="kv" data-t="pm"></p>
+        <p class="kv" data-t="ppy"></p>
+        <p class="kv" data-t="phtml"></p>
         <hr>
-        <p class="kv"><b>build:</b> HTML statico, zero dipendenze, zero tracking, tutto client-side.</p>
+        <p class="kv" data-t="pbuild"></p>
         <p class="dim">src: canjioh/n_c_c_n &nbsp;·&nbsp; audio: Web Audio API &nbsp;·&nbsp; gfx: Canvas 2D</p>
       </div>
       <div class="scr-foot">
-        <span><a class="link" href="./">&larr; console</a></span>
+        <span><a class="link" href="./" data-t="back"></a></span>
         <span><span class="key">nccn</span> · uptime &infin; · mem ok</span>
       </div>
     </div>
   </div>
 </main>
+<script>
+(function(){
+  var T={it:{
+    p1:'<b>n_c_c_n</b> &mdash; <span class="amber">ChaoticJazzStation</span> &mdash; e&#39; un set di modelli matematici che si <b>ascoltano</b>: sistemi dinamici e caos deterministico trasformati in suono, da suonare dal vivo come strumenti.',
+    pipe:'// pipeline',
+    pm:'<b>1 &middot; Mathematica</b> &mdash; primi prototipi: si integra il sistema (NDSolve / mappe) e si sonifica lo stato, con export WAV + MP4. Offline: si rende un file.',
+    ppy:'<b>2 &middot; Python</b> &mdash; passaggio al tempo reale: fisica in NumPy, audio a bassa latenza con <span class="amber">sounddevice</span>, manopole live con Dear PyGui.',
+    phtml:'<b>3 &middot; HTML</b> &mdash; porting nel browser con <span class="amber">Web Audio + Canvas</span>: niente installazione, si apre con un link. E&#39; quello che stai usando.',
+    pbuild:'<b>build:</b> HTML statico, zero dipendenze, zero tracking, tutto client-side.',
+    back:'&larr; console'},
+   en:{
+    p1:'<b>n_c_c_n</b> &mdash; <span class="amber">ChaoticJazzStation</span> &mdash; is a set of mathematical models you <b>listen to</b>: dynamical systems and deterministic chaos turned into sound, played live like instruments.',
+    pipe:'// pipeline',
+    pm:'<b>1 &middot; Mathematica</b> &mdash; first prototypes: integrate the system (NDSolve / maps) and sonify its state, exporting WAV + MP4. Offline: it renders a file.',
+    ppy:'<b>2 &middot; Python</b> &mdash; moving to real time: physics in NumPy, low-latency audio with <span class="amber">sounddevice</span>, live knobs with Dear PyGui.',
+    phtml:'<b>3 &middot; HTML</b> &mdash; ported to the browser with <span class="amber">Web Audio + Canvas</span>: no install, opens with a link. This is what you are using.',
+    pbuild:'<b>build:</b> static HTML, zero dependencies, zero tracking, all client-side.',
+    back:'&larr; console'}};
+  var L;try{L=localStorage.getItem('lang')||'it';}catch(e){L='it';}
+  var b=document.createElement('button');b.className='langbtn';document.body.appendChild(b);
+  function apply(){document.documentElement.lang=L;
+    document.querySelectorAll('[data-t]').forEach(function(e){var k=e.getAttribute('data-t');if(T[L][k]!=null)e.innerHTML=T[L][k];});
+    b.textContent=L==='it'?'EN':'IT';}
+  b.onclick=function(){L=(L==='it'?'en':'it');try{localStorage.setItem('lang',L);}catch(e){}apply();};
+  apply();
+})();
+</script>
 </body>
 </html>

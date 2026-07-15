@@ -14,6 +14,40 @@
     wip:     ['stat--wip','· WIP ·']
   };
 
+  /* ---- lingua IT/EN ----------------------------------------- */
+  var LANG = (function(){ try{ return localStorage.getItem('lang')||'it'; }catch(e){ return 'it'; } })();
+  var CURRENT = null;
+  var BOOT = ['nccn/os  boot loader v2.6',
+    'checking core memory ............. <span class="ok">OK</span>',
+    'mounting /catalog ................ <span class="ok">OK</span>',
+    'loading dynamical-systems lab .... <span class="ok">OK</span>',
+    'audio synthesis unit ............. <span class="amber">READY</span>',
+    'starting console ................. <span class="ok">OK</span>'];
+  var UI = {
+    it:{ modules:'MODULES', system:'SYSTEM', sims:'SIMULATIONS', mathsec:'MATH · STORIA',
+      subtitle:'sistemi dinamici, caos e sonificazione &mdash; suonati dal vivo nel browser. seleziona un modulo.',
+      about:'about / colophon', aboutd:'informazioni sul sistema',
+      navhome:'[↑]/[↓] naviga &nbsp; [1-9] apri &nbsp; [enter] esegui',
+      console:'&larr; console', modstat:'stato modulo',
+      nosim:'Nessuna simulazione pubblicata. &nbsp;<span class="amber">// in preparazione</span>' },
+    en:{ modules:'MODULES', system:'SYSTEM', sims:'SIMULATIONS', mathsec:'MATH · HISTORY',
+      subtitle:'dynamical systems, chaos and sonification &mdash; played live in the browser. select a module.',
+      about:'about / colophon', aboutd:'system information',
+      navhome:'[↑]/[↓] navigate &nbsp; [1-9] open &nbsp; [enter] run',
+      console:'&larr; console', modstat:'module status',
+      nosim:'No simulation published. &nbsp;<span class="amber">// work in progress</span>' }
+  };
+  function T(k){ return (UI[LANG]&&UI[LANG][k]!=null)?UI[LANG][k]:UI.it[k]; }
+  function field(o,name){ if(LANG==='en' && o[name+'_en']!=null) return o[name+'_en']; return o[name]||''; }
+  function rerender(){ if(!CURRENT) return; if(CURRENT.mode==='home') renderHome(CURRENT.mount); else renderProject(CURRENT.id, CURRENT.mount); }
+  function setLang(l){ LANG=l; try{ localStorage.setItem('lang',l); }catch(e){} document.documentElement.lang=l; ensureLangBtn(); rerender(); }
+  function ensureLangBtn(){
+    var b=document.getElementById('nccn-lang');
+    if(!b){ b=document.createElement('button'); b.id='nccn-lang'; b.className='langbtn';
+      b.addEventListener('click',function(){ setLang(LANG==='it'?'en':'it'); }); document.body.appendChild(b); }
+    b.textContent = LANG==='it'?'EN':'IT';
+  }
+
   function el(tag, cls, html){
     var e = document.createElement(tag);
     if(cls) e.className = cls;
@@ -114,17 +148,10 @@
      ============================================================ */
   function renderHome(mount){
     var P = window.PROJECTS || [];
-    var c = chassis('n_c_c_n <small>&mdash; scientific workstation</small>');
+    mount.innerHTML=''; CURRENT={mode:'home',mount:mount}; ensureLangBtn();
+    var c = chassis('n_c_c_n');
     mount.appendChild(c.ws);
-
-    boot(c.crt, [
-      'nccn/os  boot loader v2.6',
-      'checking core memory ............. <span class="ok">OK</span>',
-      'mounting /catalog ................ <span class="ok">OK</span>',
-      'loading dynamical-systems lab .... <span class="ok">OK</span>',
-      'audio synthesis unit ............. <span class="amber">READY</span>',
-      'starting console ................. <span class="ok">OK</span>'
-    ], function(){ drawHome(c.crt, P); });
+    boot(c.crt, BOOT, function(){ drawHome(c.crt, P); });
   }
 
   function drawHome(crt, P){
@@ -144,11 +171,9 @@
       '|_| |_|  \\___|  \\___|  |_| |_|   <span class="tag">ChaoticJazzStation</span>\n'+
       '</pre>';
     crt.appendChild(banner);
-    crt.appendChild(el('div','subtitle',
-      'sistemi dinamici, caos e sonificazione &mdash; suonati dal vivo nel browser. '+
-      'seleziona un modulo.'));
+    crt.appendChild(el('div','subtitle', T('subtitle')));
 
-    crt.appendChild(el('div','sec','MODULES'));
+    crt.appendChild(el('div','sec',T('modules')));
 
     var ul = el('ul','menu');
     var links = [];
@@ -160,20 +185,20 @@
       var a = el('a', null,
         '<span class="num">'+pad(k+1)+'</span>'+
         '<span class="name">'+esc(p.title)+'</span>'+
-        '<span class="desc">'+esc(p.subtitle||'')+'</span>'+
+        '<span class="desc">'+esc(field(p,'subtitle'))+'</span>'+
         '<span class="stat '+s[0]+'">'+s[1]+'</span>');
       a.href = p.id + '/';
       li.appendChild(a); ul.appendChild(li); links.push(a);
     });
     crt.appendChild(ul);
 
-    crt.appendChild(el('div','sec','SYSTEM'));
+    crt.appendChild(el('div','sec',T('system')));
     var ul2 = el('ul','menu');
     var aboutLi = el('li');
     var about = el('a', null,
       '<span class="num">&nbsp;&gt;</span>'+
-      '<span class="name">about / colophon</span>'+
-      '<span class="desc">informazioni sul sistema</span>');
+      '<span class="name">'+T('about')+'</span>'+
+      '<span class="desc">'+T('aboutd')+'</span>');
     about.href = 'about.html';
     aboutLi.appendChild(about);
     ul2.appendChild(aboutLi);
@@ -185,7 +210,7 @@
       '<span class="cursor"></span>';
     crt.appendChild(prompt);
 
-    crt.appendChild(footer('[↑]/[↓] naviga &nbsp; [1-9] apri &nbsp; [enter] esegui'));
+    crt.appendChild(footer(T('navhome')));
 
     wireNav(links);
   }
@@ -195,6 +220,7 @@
      ============================================================ */
   function renderProject(id, mount){
     var P = window.PROJECTS || [];
+    mount.innerHTML=''; CURRENT={mode:'project',id:id,mount:mount}; ensureLangBtn();
     var p = null;
     for(var i=0;i<P.length;i++){ if(P[i].id===id){ p=P[i]; break; } }
     var c = chassis('n_c_c_n / <small>'+esc(id)+'</small>');
@@ -214,24 +240,24 @@
     var s = STAT[p.status] || STAT.standby;
     c.crt.appendChild(el('div','banner',
       '<pre>'+esc(p.title)+'</pre>'));
-    c.crt.appendChild(el('div','subtitle', esc(p.subtitle||'')));
+    c.crt.appendChild(el('div','subtitle', esc(field(p,'subtitle'))));
 
-    if(p.abstract){
+    if(field(p,'abstract')){
       var ab = el('div','content');
-      ab.innerHTML = '<p>'+esc(p.abstract)+'</p>';
+      ab.innerHTML = '<p>'+esc(field(p,'abstract'))+'</p>';
       c.crt.appendChild(ab);
     }
 
-    if(p.math){
-      c.crt.appendChild(el('div','sec','MATH · STORIA'));
+    if(field(p,'math')){
+      c.crt.appendChild(el('div','sec',T('mathsec')));
       var mb = el('div','content');
-      mb.innerHTML = '<p>'+esc(p.math)+'</p>';
+      mb.innerHTML = '<p>'+esc(field(p,'math'))+'</p>';
       c.crt.appendChild(mb);
     }
 
     var sims = (p.sims||[]);
     if(sims.length){
-      c.crt.appendChild(el('div','sec','SIMULATIONS'));
+      c.crt.appendChild(el('div','sec',T('sims')));
       var ul = el('ul','menu');
       var links = [];
       sims.forEach(function(sm, k){
@@ -239,8 +265,8 @@
         var li = el('li');
         var a = el('a', null,
           '<span class="num">'+pad(k+1)+'</span>'+
-          '<span class="name">'+esc(sm.title)+'</span>'+
-          '<span class="desc">'+esc(sm.desc||'')+'</span>'+
+          '<span class="name">'+esc(field(sm,'title'))+'</span>'+
+          '<span class="desc">'+esc(field(sm,'desc'))+'</span>'+
           '<span class="stat '+ss[0]+'">'+ss[1]+'</span>');
         if(sm.status==='online'){ a.href = sm.file; }
         else { a.href='#'; a.addEventListener('click',function(e){e.preventDefault();}); }
@@ -249,9 +275,8 @@
       c.crt.appendChild(ul);
       wireNav(links);
     } else {
-      c.crt.appendChild(el('div','sec','SIMULATIONS'));
-      c.crt.appendChild(el('p','dim',
-        'Nessuna simulazione pubblicata. &nbsp;<span class="amber">// in preparazione</span>'));
+      c.crt.appendChild(el('div','sec',T('sims')));
+      c.crt.appendChild(el('p','dim', T('nosim')));
     }
 
     var prompt = el('div','prompt');
@@ -260,8 +285,8 @@
     c.crt.appendChild(prompt);
 
     c.crt.appendChild(footer(
-      '<a class="link" href="../">&larr; console</a> &nbsp;·&nbsp; '+
-      'stato modulo: <span class="'+s[0]+'">'+s[1]+'</span>'));
+      '<a class="link" href="../">'+T('console')+'</a> &nbsp;·&nbsp; '+
+      T('modstat')+': <span class="'+s[0]+'">'+s[1]+'</span>'));
   }
 
   function footer(midHtml){

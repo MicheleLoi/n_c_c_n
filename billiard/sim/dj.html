@@ -339,12 +339,12 @@ btn.onclick=function(){
  if(typeof ac==="undefined"||!ac||typeof started==="undefined"||!started){alert("Premi prima Play");return;}
  var mode=document.getElementById("recmode").value,wantV=mode!=="audio",wantA=mode!=="video",tracks=[];
  if(wantV){try{var vs=cv.captureStream(30),vt=vs.getVideoTracks();for(var i=0;i<vt.length;i++)tracks.push(vt[i]);}catch(e){}}
- if(wantA){if(!recDest){recDest=ac.createMediaStreamDestination();volGain.connect(recDest);}var at=recDest.stream.getAudioTracks();for(var j=0;j<at.length;j++)tracks.push(at[j]);}
+ if(wantA){if(!recDest){recDest=ac.createMediaStreamDestination();var cmp=ac.createDynamicsCompressor();cmp.threshold.value=-18;cmp.knee.value=12;cmp.ratio.value=6;cmp.attack.value=0.003;cmp.release.value=0.25;var mk=ac.createGain();mk.gain.value=2.2;volGain.connect(cmp);cmp.connect(mk);mk.connect(recDest);}var at=recDest.stream.getAudioTracks();for(var j=0;j<at.length;j++)tracks.push(at[j]);}
  var mime=mimeFor(wantV),stream=new MediaStream(tracks);
- try{rec=new MediaRecorder(stream,{mimeType:mime});}catch(e){try{rec=new MediaRecorder(stream);}catch(e2){alert("Registrazione non supportata dal browser");return;}}
+ try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6000000,audioBitsPerSecond:192000});}catch(e){try{rec=new MediaRecorder(stream);}catch(e2){alert("Registrazione non supportata dal browser");return;}}
  chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
  rec.onstop=function(){var type=rec.mimeType||mime,blob=new Blob(chunks,{type:type}),ext=type.indexOf("mp4")>=0?(wantV?"mp4":"m4a"):"webm",url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="chaosjazz-"+mode+"."+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},3000);btn.textContent="REC";btn.style.background="";btn.style.color="";};
- rec.start();btn.textContent="■ STOP";btn.style.background="#c33";btn.style.color="#fff";
+ rec.start(250);btn.textContent="■ STOP";btn.style.background="#c33";btn.style.color="#fff";
 };})();
 </script>
 </body>

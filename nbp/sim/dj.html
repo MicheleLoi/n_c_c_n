@@ -21,6 +21,7 @@
   #lang{position:absolute;top:8px;right:8px;width:auto;flex:none;padding:4px 10px}
 @media (max-width:760px){#app{flex-direction:column}#panel{width:100%;flex:0 0 auto;max-height:46vh;order:2;border-right:none;border-top:1px solid #1c1c28}#stage{order:1;flex:1 1 auto;min-height:46vh}input[type=range]{height:24px}select,button,#back,#lang{font-size:14px}}
 </style>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwNTEwMGEiLz48cGF0aCBkPSJNMiAxNiBxMy41IC04IDcgMCB0NyAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM1YWRjODIiIHN0cm9rZS13aWR0aD0iMi4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48Y2lyY2xlIGN4PSIyMy41IiBjeT0iMTkuNSIgcj0iNC4yIiBmaWxsPSIjNWFkYzgyIi8+PHJlY3QgeD0iMjciIHk9IjYuNSIgd2lkdGg9IjEuNyIgaGVpZ2h0PSIxMy4yIiBmaWxsPSIjNWFkYzgyIi8+PC9zdmc+">
 </head>
 <body>
 <div id="app">
@@ -48,7 +49,7 @@
     <label data-t="lvstr">vol strumenti <span class="val" id="vinst">0.95</span></label><input type="range" id="instvol" min="0" max="1.4" step="0.01" value="0.95">
     <label data-t="lvbase">vol base <span class="val" id="vbase">0.75</span></label><input type="range" id="basevol" min="0" max="1.4" step="0.01" value="0.75">
     <label data-t="lvol">volume master <span class="val" id="vvol">0.8</span></label><input type="range" id="vol" min="0" max="1" step="0.01" value="0.8">
-    <hr><div id="info" style="color:#778;font-size:11px"></div>
+    <hr><div style="display:flex;gap:6px;margin:6px 0"><select id="recmode" style="flex:1;padding:4px;background:#14141e;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:5px"><option value="av">audio+video (mp4)</option><option value="video">solo video (mp4)</option><option value="audio">solo audio</option></select><button id="recbtn" style="flex:0 0 auto;padding:6px 8px;background:#1c1c2a;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:6px;cursor:pointer">REC</button></div><div id="info" style="color:#778;font-size:11px"></div>
   </div>
   <div id="stage"><canvas id="cv"></canvas>
     <a id="back" href="../" data-t="back" style="position:absolute;top:8px;left:8px;padding:4px 10px;background:#1c1c2a;color:#8ee;border:1px solid #2a2a3a;border-radius:6px;text-decoration:none">← indietro</a>
@@ -172,6 +173,20 @@ function restart(){if(started)startClocks();else initState();}
 function mark(){$("play").classList.toggle("on",running);$("pause").classList.toggle("on",!running);}
 $("play").onclick=play;$("pause").onclick=pause;$("restart").onclick=restart;$("lang").onclick=()=>setLang(LANG==="it"?"en":"it");
 setInterval(scheduler,25);initState();
+(function(){var rec=null,chunks=[],recDest=null;var btn=document.getElementById("recbtn");if(!btn)return;
+function mimeFor(v){var L=v?["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm"]:["audio/mp4;codecs=mp4a.40.2","audio/mp4","audio/webm;codecs=opus","audio/webm"];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return v?"video/webm":"audio/webm";}
+btn.onclick=function(){
+ if(rec&&rec.state!=="inactive"){rec.stop();return;}
+ if(typeof ac==="undefined"||!ac||typeof started==="undefined"||!started){alert("Premi prima Play");return;}
+ var mode=document.getElementById("recmode").value,wantV=mode!=="audio",wantA=mode!=="video",tracks=[];
+ if(wantV){try{var vs=cv.captureStream(30),vt=vs.getVideoTracks();for(var i=0;i<vt.length;i++)tracks.push(vt[i]);}catch(e){}}
+ if(wantA){if(!recDest){recDest=ac.createMediaStreamDestination();volGain.connect(recDest);}var at=recDest.stream.getAudioTracks();for(var j=0;j<at.length;j++)tracks.push(at[j]);}
+ var mime=mimeFor(wantV),stream=new MediaStream(tracks);
+ try{rec=new MediaRecorder(stream,{mimeType:mime});}catch(e){try{rec=new MediaRecorder(stream);}catch(e2){alert("Registrazione non supportata dal browser");return;}}
+ chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+ rec.onstop=function(){var type=rec.mimeType||mime,blob=new Blob(chunks,{type:type}),ext=type.indexOf("mp4")>=0?(wantV?"mp4":"m4a"):"webm",url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="chaosjazz-"+mode+"."+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},3000);btn.textContent="REC";btn.style.background="";btn.style.color="";};
+ rec.start();btn.textContent="■ STOP";btn.style.background="#c33";btn.style.color="#fff";
+};})();
 </script>
 </body>
 </html>

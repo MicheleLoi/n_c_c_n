@@ -241,6 +241,9 @@
     c.crt.appendChild(el('div','banner',
       '<pre>'+esc(p.title)+'</pre>'));
     c.crt.appendChild(el('div','subtitle', esc(field(p,'subtitle'))));
+    if(field(p,'credit')){
+      c.crt.appendChild(el('div','subtitle','&mdash; <span class="amber">'+esc(field(p,'credit'))+'</span>'));
+    }
 
     if(field(p,'abstract')){
       var ab = el('div','content');

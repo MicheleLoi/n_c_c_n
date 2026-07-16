@@ -65,6 +65,8 @@ window.PROJECTS = [
     title: "PENDULUM",
     subtitle: "Oscillatori non lineari e biforcazioni",
     subtitle_en: "Nonlinear oscillators and bifurcations",
+    credit: "da un'idea di Federico Munini",
+    credit_en: "from an idea by Federico Munini",
     category: "DYNAMICAL SYSTEMS",
     status: "online",
     abstract:

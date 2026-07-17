@@ -208,5 +208,16 @@ btn.onclick=function(){
  rec.start(250);btn.textContent="■ STOP";btn.style.background="#c33";btn.style.color="#fff";
 };})();
 </script>
+<button id="qhelp" title="modello → suono" style="position:fixed;top:8px;right:52px;width:30px;height:30px;border-radius:50%;padding:0;background:#1c1c2a;color:#8ee;border:1px solid #2a2a3a;cursor:pointer;font-size:15px;line-height:1;z-index:30">?</button>
+<div id="qhelppop" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,3,8,0.72);z-index:31">
+  <div style="max-width:440px;margin:16px;padding:18px 20px;background:#0d0d14;border:1px solid #2a2a3a;border-radius:10px;color:#d8d8e0;font:13px/1.55 system-ui,sans-serif;max-height:82vh;overflow:auto">
+    <div style="font-weight:bold;color:#8ee;margin-bottom:4px">Modello → Suono</div>
+    <p style="margin:0 0 12px">Ogni rimbalzo sul bordo genera una nota: l'altezza dalla posizione lungo il bordo, il volume dall'angolo d'urto. Tre palline quasi identiche partono insieme, ognuna con il suo strumento: nelle forme integrabili restano agganciate, nello stadio caotico DIVERGONO e le voci si sfasano — la sensibilità alle condizioni iniziali diventa musica.</p>
+    <div style="font-weight:bold;color:#8ee;margin-bottom:4px">Model → Sound</div>
+    <p style="margin:0 0 14px;color:#aab">Each bounce off the wall makes a note: pitch from the position along the boundary, volume from the impact angle. Three nearly identical balls start together, each with its own instrument: in integrable shapes they stay locked, in the chaotic stadium they DIVERGE and the voices drift apart — sensitivity to initial conditions becomes music.</p>
+    <div style="text-align:right"><button id="qhelpx" style="padding:5px 14px;background:#1c1c2a;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:6px;cursor:pointer">OK</button></div>
+  </div>
+</div>
+<script>(function(){var b=document.getElementById('qhelp'),p=document.getElementById('qhelppop'),x=document.getElementById('qhelpx');b.onclick=function(){p.style.display='flex';};x.onclick=function(){p.style.display='none';};p.onclick=function(e){if(e.target===p)p.style.display='none';};})();</script>
 </body>
 </html>

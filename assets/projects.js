@@ -100,6 +100,47 @@ window.PROJECTS = [
   },
 
   {
+    id: "lorenz",
+    title: "LORENZ ATTRACTOR",
+    subtitle: "Caos deterministico e le due ali della farfalla",
+    subtitle_en: "Deterministic chaos and the butterfly's two wings",
+    category: "DYNAMICAL SYSTEMS",
+    status: "online",
+    abstract:
+      "L'attrattore di Lorenz: la traiettoria si avvolge attorno a un'ala, " +
+      "poi salta sull'altra. Ogni avvolgimento diventa una nota.",
+    abstract_en:
+      "The Lorenz attractor: the trajectory winds around one wing, then jumps " +
+      "to the other. Every winding becomes a note.",
+    math:
+      "Il sistema di Lorenz (E. N. Lorenz, 1963) e' un modello semplificato della " +
+      "convezione atmosferica: tre equazioni differenziali in x, y, z con i parametri " +
+      "sigma, rho, beta. Per i valori classici (sigma=10, rho=28, beta=8/3) le soluzioni " +
+      "non convergono a un punto ne' a un ciclo, ma si addensano su un ATTRATTORE STRANO " +
+      "a forma di farfalla: la traiettoria si avvolge attorno a un'ala per qualche giro " +
+      "e poi salta imprevedibilmente sull'altra. E' l'esempio storico del caos " +
+      "deterministico e della sensibilita' alle condizioni iniziali (l''effetto " +
+      "farfalla'). Qui ogni avvolgimento — un massimo locale di z — genera una nota, " +
+      "l'ala (segno di x) sceglie il tema, e i salti tra le ali scandiscono il ritmo.",
+    math_en:
+      "The Lorenz system (E. N. Lorenz, 1963) is a simplified model of atmospheric " +
+      "convection: three differential equations in x, y, z with parameters sigma, rho, " +
+      "beta. For the classic values (sigma=10, rho=28, beta=8/3) the solutions converge " +
+      "neither to a point nor to a cycle, but settle onto a butterfly-shaped STRANGE " +
+      "ATTRACTOR: the trajectory winds around one wing for a few loops and then jumps " +
+      "unpredictably to the other. It is the historic example of deterministic chaos and " +
+      "sensitivity to initial conditions (the 'butterfly effect'). Here every winding — " +
+      "a local maximum of z — generates a note, the wing (sign of x) selects the theme, " +
+      "and the jumps between wings drive the rhythm.",
+    sims: [
+      { id:"dj", title:"Lorenz DJ", title_en:"Lorenz DJ", file:"sim/dj.html",
+        desc:"Sonificazione dal vivo dell'attrattore: due temi per le due ali, batteria pilotata dai giri",
+        desc_en:"Live sonification of the attractor: two themes for the two wings, drums driven by the windings",
+        status:"online", year:2026 }
+    ]
+  },
+
+  {
     id: "nbp",
     title: "N-BODY PROBLEM",
     subtitle: "Dinamica gravitazionale a molti corpi",

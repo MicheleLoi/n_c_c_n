@@ -26,6 +26,10 @@
     border: 1px solid #2a2a3a; border-radius: 5px; }
   hr { border: none; border-top: 1px solid #1c1c28; margin: 12px 0; }
   .val { float: right; color: #d8d8e0; }
+  .synth-title { margin: 12px 0 4px; color: #ff8c28; font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+  .adsr-preview { height: 58px; margin: 5px 0 7px; padding: 5px; background: #09090f; border: 1px solid #2a2a3a; border-radius: 5px; }
+  .adsr-preview svg { width: 100%; height: 100%; display: block; }
+  #adsr-line { fill: none; stroke: #ff8c28; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   #hint { position: absolute; inset: 0; display: flex; align-items: center;
     justify-content: center; text-align: center; color: #667; font-size: 15px;
     pointer-events: none; }
@@ -75,6 +79,25 @@
     <input type="range" id="oct" min="0.25" max="2" step="0.05" value="0.5">
     <label data-t="linst" style="color:#ff8c28">strumento</label>
     <select id="inst"></select>
+    <div class="synth-title">SYNTH · ADSR</div>
+    <div class="adsr-preview" aria-label="ADSR envelope preview">
+      <svg viewBox="0 0 120 50" preserveAspectRatio="none"><polyline id="adsr-line" points="3,45 18,6 42,26 86,26 117,45"></polyline></svg>
+    </div>
+    <label>attack <span class="val" id="vAttack">0.01 s</span></label>
+    <input type="range" id="attack" min="0.001" max="1.2" step="0.001" value="0.01">
+    <label>decay <span class="val" id="vDecay">0.18 s</span></label>
+    <input type="range" id="decay" min="0.005" max="1.5" step="0.005" value="0.18">
+    <label>sustain <span class="val" id="vSustain">55%</span></label>
+    <input type="range" id="sustain" min="0.05" max="1" step="0.01" value="0.55">
+    <label>release <span class="val" id="vRelease">0.22 s</span></label>
+    <input type="range" id="release" min="0.01" max="2" step="0.01" value="0.22">
+    <div class="synth-title">FILTER</div>
+    <label>type</label>
+    <select id="filtertype"><option value="lowpass">low-pass</option><option value="highpass">high-pass</option><option value="bandpass">band-pass</option><option value="notch">notch</option></select>
+    <label>cutoff <span class="val" id="vCutoff">3200 Hz</span></label>
+    <input type="range" id="cutoff" min="80" max="12000" step="10" value="3200">
+    <label>resonance <span class="val" id="vResonance">0.70</span></label>
+    <input type="range" id="resonance" min="0" max="18" step="0.1" value="0.7">
     <hr>
     <label data-t="lbase">base ritmica</label>
     <select id="pattern">
@@ -106,7 +129,9 @@
 // ---------- parametri (letti dai controlli) ----------
 const P = { topo:"stadio", scala:0.7, spd:2, eps:0.3, root:110, nOtt:2,
   steps:[0,3,5,7,10], oct:0.5, pattern:"two-step", bpm:150, drive:1.2, vol:0.8,
-  config:"diagonale", inst:"contrabbasso", instVol:0.95, baseVol:0.75 };
+  config:"diagonale", inst:"contrabbasso", instVol:0.95, baseVol:0.75,
+  attack:0.01, decay:0.18, sustain:0.55, release:0.22,
+  filterType:"lowpass", cutoff:3200, resonance:0.7 };
 const BASE_SPEED = 3.0, VIEW = 1.6, pExp = 0.9;
 const PATTERNS = {
   "two-step":{k:[0,10],s:[8],h:[0,2,4,6,8,10,12,14]},
@@ -201,16 +226,22 @@ function initAudio(){
 }
 function voice(time,freq,amp,name){
   const d=INSTR[name]||INSTR.basso, g=ac.createGain();
+  const attackEnd=time+P.attack, decayEnd=attackEnd+P.decay;
+  const releaseAt=decayEnd+Math.max(0.08,d.dec||0.30), stopAt=releaseAt+P.release+0.03;
+  const sustainAmp=Math.max(0.0001,amp*P.sustain);
   g.gain.setValueAtTime(0.0001,time);
-  g.gain.linearRampToValueAtTime(amp,time+d.atk);
-  g.gain.exponentialRampToValueAtTime(0.0001,time+d.dec+0.05);
-  if(d.lp){ const f=ac.createBiquadFilter(); f.type="lowpass"; f.frequency.value=d.lp; g.connect(f); f.connect(synthBus); }
-  else g.connect(synthBus);
+  g.gain.linearRampToValueAtTime(amp,attackEnd);
+  g.gain.linearRampToValueAtTime(sustainAmp,decayEnd);
+  g.gain.setValueAtTime(sustainAmp,releaseAt);
+  g.gain.exponentialRampToValueAtTime(0.0001,stopAt);
+  const f=ac.createBiquadFilter(); f.type=P.filterType;
+  f.frequency.setValueAtTime(P.cutoff,time); f.Q.setValueAtTime(P.resonance,time);
+  g.connect(f); f.connect(synthBus);
   for(const pt of d.parts){ const o=ac.createOscillator(); o.type=pt[0];
     if(d.drop){ o.frequency.setValueAtTime(freq*pt[1]*(1+d.drop),time); o.frequency.exponentialRampToValueAtTime(freq*pt[1],time+0.03); }
     else o.frequency.setValueAtTime(freq*pt[1],time);
     const gg=ac.createGain(); gg.gain.value=pt[2]*0.9; o.connect(gg); gg.connect(g);
-    o.start(time); o.stop(time+d.dec+0.1); }
+    o.start(time); o.stop(stopAt); }
 }
 function kickAt(t){ const o=ac.createOscillator(),g=ac.createGain();
   o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12);
@@ -293,20 +324,32 @@ draw();
 
 // ---------- controlli ----------
 const $=id=>document.getElementById(id);
-function bindRange(id,key,span,fix){ const el=$(id); el.oninput=()=>{ P[key]=parseFloat(el.value);
-  if(span)$(span).textContent=P[key].toFixed(fix); onParam(key); }; }
+function bindRange(id,key,span,fix,suffix=""){ const el=$(id); el.oninput=()=>{ P[key]=parseFloat(el.value);
+  if(span)$(span).textContent=P[key].toFixed(fix)+suffix; onParam(key); }; }
 bindRange("scala","scala","vScala",2); bindRange("spd","spd","vSpd",1);
 bindRange("eps","eps","vEps",2); bindRange("root","root","vRoot",0);
 bindRange("oct","oct","vOct",2); bindRange("bpm","bpm","vBpm",0);
 bindRange("drive","drive","vDrive",1); bindRange("vol","vol","vVol",2);
 bindRange("instvol","instVol","vInst",2); bindRange("basevol","baseVol","vBase",2);
+bindRange("attack","attack","vAttack",2," s"); bindRange("decay","decay","vDecay",2," s");
+bindRange("release","release","vRelease",2," s"); bindRange("cutoff","cutoff","vCutoff",0," Hz");
+bindRange("resonance","resonance","vResonance",2);
+$("sustain").oninput=e=>{ P.sustain=parseFloat(e.target.value); $("vSustain").textContent=Math.round(P.sustain*100)+"%"; onParam("sustain"); };
+$("filtertype").onchange=e=>{ P.filterType=e.target.value; onParam("filterType"); };
 $("topo").onchange=e=>{ P.topo=e.target.value; restart(); };
 $("config").onchange=e=>{ P.config=e.target.value; restart(); };
 $("pattern").onchange=e=>{ P.pattern=e.target.value; };
 $("scale").onchange=e=>{ P.steps=e.target.value.split(",").map(Number); SCALE=scaleFreqs(); };
 INST_NAMES.forEach(n=>{const o=document.createElement("option");o.textContent=n;if(n===P.inst)o.selected=true;$("inst").appendChild(o);});
 $("inst").onchange=e=>P.inst=e.target.value;
+function updateAdsrPreview(){
+  const attackX=3+Math.min(36,P.attack/1.2*36), decayX=attackX+Math.min(28,P.decay/1.5*28);
+  const sustainY=45-P.sustain*30;
+  const releaseStart=92-Math.min(30,P.release/2*30);
+  $("adsr-line").setAttribute("points",`3,45 ${attackX.toFixed(1)},6 ${decayX.toFixed(1)},${sustainY.toFixed(1)} ${releaseStart.toFixed(1)},${sustainY.toFixed(1)} 117,45`);
+}
 function onParam(key){
+  if(["attack","decay","sustain","release"].includes(key)) updateAdsrPreview();
   if(!started) return;
   if(key==="root") SCALE=scaleFreqs();
   if(key==="drive") shaper.curve=driveCurve(P.drive);
@@ -321,6 +364,7 @@ function restart(){ if(!started){ initBall(); return; } startClocks(); }
 function markBtns(){ $("play").classList.toggle("on",running); $("pause").classList.toggle("on",!running); }
 $("play").onclick=play; $("pause").onclick=pause; $("restart").onclick=restart;
 setInterval(scheduler,25);
+updateAdsrPreview();
 initBall();
 
 // ---------- bilingue IT/EN ----------

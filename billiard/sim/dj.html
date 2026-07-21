@@ -106,6 +106,8 @@
     </select>
     <label data-t="lbpm">bpm <span class="val" id="vBpm">150</span></label>
     <input type="range" id="bpm" min="80" max="185" step="1" value="150">
+    <label data-t="lsync">sync <span class="val" id="vSync">0%</span></label>
+    <input type="range" id="sync" min="0" max="1" step="0.05" value="0">
     <label data-t="ldrive">drive (distorsione) <span class="val" id="vDrive">1.2</span></label>
     <input type="range" id="drive" min="1" max="6" step="0.1" value="1.2">
     <label data-t="lvstr">vol strumenti <span class="val" id="vInst">0.95</span></label>
@@ -128,7 +130,7 @@
 "use strict";
 // ---------- parametri (letti dai controlli) ----------
 const P = { topo:"stadio", scala:0.7, spd:2, eps:0.3, root:110, nOtt:2,
-  steps:[0,3,5,7,10], oct:0.5, pattern:"two-step", bpm:150, drive:1.2, vol:0.8,
+  steps:[0,3,5,7,10], oct:0.5, pattern:"two-step", bpm:150, sync:0, drive:1.2, vol:0.8,
   config:"diagonale", inst:"contrabbasso", instVol:0.95, baseVol:0.75,
   attack:0.01, decay:0.18, sustain:0.55, release:0.22,
   filterType:"lowpass", cutoff:3200, resonance:0.7 };
@@ -200,7 +202,7 @@ const INSTR={
   campana:{atk:.001,dec:.55,parts:[["sine",1,1],["sine",2.76,.5],["sine",5.4,.25]]}
 };
 const INST_NAMES=Object.keys(INSTR);
-let stepIdx=0, nextStep=0, running=false, started=false;
+let stepIdx=0, nextStep=0, gridOrigin=0, running=false, started=false;
 function scaleFreqs(){ const a=[]; for(let o=0;o<=P.nOtt;o++) for(const s of P.steps)
   a.push(P.root*Math.pow(2,o+s/12)); a.sort((x,y)=>x-y); return a; }
 let SCALE=scaleFreqs();
@@ -255,6 +257,14 @@ function noiseAt(t,dur,hp,amp,tone){ const s=ac.createBufferSource(); s.buffer=n
     og.gain.setValueAtTime(amp*0.5,t); og.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     o.connect(og); og.connect(drumBus); o.start(t); o.stop(t+dur+0.02); } }
 
+function syncedTime(tPhys){
+  if(P.sync<=0) return tPhys;
+  const sixt=60/P.bpm/4;
+  // Causal quantization: never schedule a collision in the past.
+  const nextGrid=gridOrigin+Math.ceil((tPhys-gridOrigin-1e-7)/sixt)*sixt;
+  return tPhys+P.sync*(nextGrid-tPhys);
+}
+
 function scheduler(){
   if(!started || !running || ac.state!=="running") return;
   const ahead = ac.currentTime + 0.12;
@@ -263,7 +273,7 @@ function scheduler(){
     const hp=seg.hit, nrm=normal(hp[0],hp[1]);
     const inc=Math.abs(seg.dir[0]*nrm[0]+seg.dir[1]*nrm[1]);
     let s=Math.atan2(hp[1],hp[0]); s=((s%(2*Math.PI))+2*Math.PI)%(2*Math.PI); s/=2*Math.PI;
-    voice(seg.t1, snap(Math.pow(s,pExp))*P.oct, 0.30+0.70*inc, P.inst);
+    voice(syncedTime(seg.t1), snap(Math.pow(s,pExp))*P.oct, 0.30+0.70*inc, P.inst);
     bounces.push({t:seg.t1,x:hp[0],y:hp[1]});
     const dn=seg.dir[0]*nrm[0]+seg.dir[1]*nrm[1];
     ball.d=[seg.dir[0]-2*dn*nrm[0], seg.dir[1]-2*dn*nrm[1]]; ball.P=hp;
@@ -284,7 +294,7 @@ function scheduler(){
 }
 
 function startClocks(){ const now=ac.currentTime; segs=[]; bounces=[]; initBall();
-  newSegment(now); stepIdx=0; nextStep=now; }
+  newSegment(now); stepIdx=0; gridOrigin=now; nextStep=now; }
 
 // ---------- disegno ----------
 const cv=document.getElementById("cv"), cx=cv.getContext("2d");
@@ -324,11 +334,12 @@ draw();
 
 // ---------- controlli ----------
 const $=id=>document.getElementById(id);
-function bindRange(id,key,span,fix,suffix=""){ const el=$(id); el.oninput=()=>{ P[key]=parseFloat(el.value);
-  if(span)$(span).textContent=P[key].toFixed(fix)+suffix; onParam(key); }; }
+function bindRange(id,key,span,fix,suffix="",multiplier=1){ const el=$(id); el.oninput=()=>{ P[key]=parseFloat(el.value);
+  if(span)$(span).textContent=(P[key]*multiplier).toFixed(fix)+suffix; onParam(key); }; }
 bindRange("scala","scala","vScala",2); bindRange("spd","spd","vSpd",1);
 bindRange("eps","eps","vEps",2); bindRange("root","root","vRoot",0);
 bindRange("oct","oct","vOct",2); bindRange("bpm","bpm","vBpm",0);
+bindRange("sync","sync","vSync",0,"%",100);
 bindRange("drive","drive","vDrive",1); bindRange("vol","vol","vVol",2);
 bindRange("instvol","instVol","vInst",2); bindRange("basevol","baseVol","vBase",2);
 bindRange("attack","attack","vAttack",2," s"); bindRange("decay","decay","vDecay",2," s");
@@ -352,6 +363,7 @@ function onParam(key){
   if(["attack","decay","sustain","release"].includes(key)) updateAdsrPreview();
   if(!started) return;
   if(key==="root") SCALE=scaleFreqs();
+  if(key==="bpm" && started){ const sixt=60/P.bpm/4; gridOrigin=nextStep-stepIdx*sixt; }
   if(key==="drive") shaper.curve=driveCurve(P.drive);
   if(key==="vol") volGain.gain.setTargetAtTime(P.vol, ac.currentTime, 0.02);
   if(key==="instVol") synthBus.gain.setTargetAtTime(P.instVol, ac.currentTime, 0.02);
@@ -368,8 +380,8 @@ updateAdsrPreview();
 initBall();
 
 // ---------- bilingue IT/EN ----------
-const T={it:{pause:"‖ Pausa",back:"← indietro",lcfg:"Config. iniziale",ltopo:"Topologia",lscala:"scalaBil (dimensione = ritmo)",lspd:"spd (velocità)",leps:"eps (solo ovale)",lroot:"root Hz",lscale:"scala",loct:"ottava voce",linst:"strumento",lbase:"base ritmica",lbpm:"bpm",ldrive:"drive (distorsione)",lvstr:"vol strumenti",lvbase:"vol base",lvol:"volume master",hint:"Premi ▶ Play per avviare l'audio"},
- en:{pause:"‖ Pause",back:"← back",lcfg:"Start config",ltopo:"Topology",lscala:"scalaBil (size = rhythm)",lspd:"spd (speed)",leps:"eps (oval only)",lroot:"root Hz",lscale:"scale",loct:"voice octave",linst:"instrument",lbase:"drum base",lbpm:"bpm",ldrive:"drive (distortion)",lvstr:"instr. volume",lvbase:"drum volume",lvol:"master volume",hint:"Press ▶ Play to start audio"}};
+const T={it:{pause:"‖ Pausa",back:"← indietro",lcfg:"Config. iniziale",ltopo:"Topologia",lscala:"scalaBil (dimensione = ritmo)",lspd:"spd (velocità)",leps:"eps (solo ovale)",lroot:"root Hz",lscale:"scala",loct:"ottava voce",linst:"strumento",lbase:"base ritmica",lbpm:"bpm",lsync:"sync",ldrive:"drive (distorsione)",lvstr:"vol strumenti",lvbase:"vol base",lvol:"volume master",hint:"Premi ▶ Play per avviare l'audio"},
+ en:{pause:"‖ Pause",back:"← back",lcfg:"Start config",ltopo:"Topology",lscala:"scalaBil (size = rhythm)",lspd:"spd (speed)",leps:"eps (oval only)",lroot:"root Hz",lscale:"scale",loct:"voice octave",linst:"instrument",lbase:"drum base",lbpm:"bpm",lsync:"sync",ldrive:"drive (distortion)",lvstr:"instr. volume",lvbase:"drum volume",lvol:"master volume",hint:"Press ▶ Play to start audio"}};
 let LANG=localStorage.getItem("lang")||"it";
 function setLang(l){LANG=l;localStorage.setItem("lang",l);document.documentElement.lang=l;
   document.querySelectorAll("[data-t]").forEach(e=>{const k=e.getAttribute("data-t"),t=T[l][k];if(t===undefined)return;const v=e.querySelector(".val");if(v){e.textContent=t+" ";e.appendChild(v);}else e.textContent=t;});

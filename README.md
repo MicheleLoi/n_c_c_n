@@ -8,9 +8,10 @@ Sito statico, nessuna dipendenza esterna, nessun build. Funziona aprendo
 
 ## Trasparenza sull'assistenza AI
 
-Il progetto e le decisioni editoriali sono di Michele Loi. Alcune parti del
-codice e dell'interfaccia sono state sviluppate con l'assistenza di OpenAI
-Codex; l'autore ne ha effettuato revisione e integrazione nel progetto.
+Il progetto originale <code>n_c_c_n</code> e' di Nicolo (<a href="https://github.com/canjioh/n_c_c_n">canjioh</a>).
+Questo repository e' un fork: le modifiche qui introdotte sono a cura di
+Michele Loi. Alcune di esse sono state sviluppate con l'assistenza di OpenAI
+Codex e poi riviste e integrate nel fork.
 
 ## Struttura
 

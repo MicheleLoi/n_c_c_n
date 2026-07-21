@@ -52,10 +52,20 @@
     <label data-t="lscale">scala</label>
     <select id="scale"><option value="0,3,5,7,10">pentatonica min</option><option value="0,2,4,7,9">pentatonica maj</option><option value="0,2,3,5,7,8,10">minore</option><option value="0,2,3,5,7,9,10">dorico</option><option value="0,1,2,3,4,5,6,7,8,9,10,11">cromatica</option></select>
     <div id="voices"></div>
+    <div style="margin:12px 0 4px;color:#ff8c28;font-size:11px;font-weight:700;letter-spacing:.12em">SYNTH · ADSR</div>
+    <label>attack <span class="val" id="vAttack">0.01 s</span></label><input type="range" id="attack" min="0.001" max="1.2" step="0.001" value="0.01">
+    <label>decay <span class="val" id="vDecay">0.18 s</span></label><input type="range" id="decay" min="0.005" max="1.5" step="0.005" value="0.18">
+    <label>sustain <span class="val" id="vSustain">55%</span></label><input type="range" id="sustain" min="0.05" max="1" step="0.01" value="0.55">
+    <label>release <span class="val" id="vRelease">0.22 s</span></label><input type="range" id="release" min="0.01" max="2" step="0.01" value="0.22">
+    <div style="margin:12px 0 4px;color:#ff8c28;font-size:11px;font-weight:700;letter-spacing:.12em">FILTER</div>
+    <label>type</label><select id="filtertype"><option value="lowpass">low-pass</option><option value="highpass">high-pass</option><option value="bandpass">band-pass</option><option value="notch">notch</option></select>
+    <label>cutoff <span class="val" id="vCutoff">3200 Hz</span></label><input type="range" id="cutoff" min="80" max="12000" step="10" value="3200">
+    <label>resonance <span class="val" id="vResonance">0.70</span></label><input type="range" id="resonance" min="0" max="18" step="0.1" value="0.7">
     <hr>
     <label data-t="lbase">base ritmica</label>
     <select id="pattern"><option>off</option><option>two-step</option><option>four</option><option>breakbeat</option><option>punk</option></select>
     <label data-t="lbpm">bpm <span class="val" id="vbpm">140</span></label><input type="range" id="bpm" min="80" max="185" step="1" value="140">
+    <label>sync <span class="val" id="vSync">0%</span></label><input type="range" id="sync" min="0" max="1" step="0.05" value="0">
     <label data-t="ldrive">drive <span class="val" id="vdrive">1.3</span></label><input type="range" id="drive" min="1" max="6" step="0.1" value="1.3">
     <label data-t="lvstr">vol strumenti <span class="val" id="vinst">0.95</span></label><input type="range" id="instvol" min="0" max="1.4" step="0.01" value="0.95">
     <label data-t="lvbase">vol base <span class="val" id="vbase">0.75</span></label><input type="range" id="basevol" min="0" max="1.4" step="0.01" value="0.75">
@@ -76,7 +86,7 @@ let LANG="it";
 function setLang(l){LANG=l;document.querySelectorAll("[data-t]").forEach(e=>{const k=e.getAttribute("data-t"),t=T[l][k];if(t===undefined)return;const v=e.querySelector(".val");if(v){e.textContent=t+" ";e.appendChild(v);}else e.textContent=t;});document.getElementById("lang").textContent=l==="it"?"EN":"IT";}
 
 const P={config:"caotico",N:1,m1:1,m2:1,L1:1,L2:1,g:9.8,damp:0.02,tau:0,pushamt:4,
-  root:110,nOtt:2,steps:[0,3,5,7,10],pattern:"two-step",bpm:140,drive:1.3,vol:0.8,instVol:0.95,baseVol:0.75};
+  root:110,nOtt:2,steps:[0,3,5,7,10],pattern:"two-step",bpm:140,drive:1.3,vol:0.8,instVol:0.95,baseVol:0.75,attack:0.01,decay:0.18,sustain:0.55,release:0.22,filterType:"lowpass",cutoff:3200,resonance:0.7,sync:0};
 const voices=[{wave:"contrabbasso",oct:0.5,vol:1},{wave:"tromba",oct:1,vol:0.9},{wave:"synth",oct:2,vol:0.7}];
 const PIV=[0,0.8], SPAN=2.6;
 const PATTERNS={off:{},"two-step":{k:[0,10],s:[8],h:[0,2,4,6,8,10,12,14]},four:{k:[0,4,8,12],s:[4,12],h:[2,6,10,14]},breakbeat:{k:[0,10,11],s:[4,12,14],h:[0,2,4,6,8,10,12,14]},punk:{k:[0,4,8,12],s:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}};
@@ -98,7 +108,7 @@ function rk4(a,dt){const k1=deriv(a),k2=deriv(a.map((x,i)=>x+.5*dt*k1[i])),k3=de
   return a.map((x,i)=>x+dt/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));}
 
 // audio
-let ac,synthBus,drumBus,shaper,volGain,noiseBuf,stepIdx=0,nextStep=0,running=false,started=false,lastSim=0,droneOsc,droneGain,dronePhase=0;
+let ac,synthBus,drumBus,shaper,volGain,noiseBuf,stepIdx=0,nextStep=0,gridOrigin=0,running=false,started=false,lastSim=0,droneOsc,droneGain,dronePhase=0;
 const INSTR={
   basso:{atk:.005,dec:.30,parts:[["sine",1,1],["sine",2,.25]]},
   contrabbasso:{atk:.004,dec:.30,drop:.09,parts:[["triangle",1,1],["sine",2,.2],["sine",3,.08]]},
@@ -109,9 +119,10 @@ const INSTR={
 };
 const INST_NAMES=Object.keys(INSTR);
 function voice(time,freq,amp,name){const d=INSTR[name]||INSTR.basso,g=ac.createGain();
-  g.gain.setValueAtTime(0.0001,time);g.gain.linearRampToValueAtTime(amp,time+d.atk);g.gain.exponentialRampToValueAtTime(0.0001,time+d.dec+0.05);
-  if(d.lp){const f=ac.createBiquadFilter();f.type="lowpass";f.frequency.value=d.lp;g.connect(f);f.connect(synthBus);}else g.connect(synthBus);
-  for(const pt of d.parts){const o=ac.createOscillator();o.type=pt[0];if(d.drop){o.frequency.setValueAtTime(freq*pt[1]*(1+d.drop),time);o.frequency.exponentialRampToValueAtTime(freq*pt[1],time+0.03);}else o.frequency.setValueAtTime(freq*pt[1],time);const gg=ac.createGain();gg.gain.value=pt[2]*0.9;o.connect(gg);gg.connect(g);o.start(time);o.stop(time+d.dec+0.1);}}
+  const attackEnd=time+P.attack,decayEnd=attackEnd+P.decay,releaseAt=decayEnd+Math.max(0.08,d.dec||0.30),stopAt=releaseAt+P.release+0.03,sustainAmp=Math.max(0.0001,amp*P.sustain);
+  g.gain.setValueAtTime(0.0001,time);g.gain.linearRampToValueAtTime(amp,attackEnd);g.gain.linearRampToValueAtTime(sustainAmp,decayEnd);g.gain.setValueAtTime(sustainAmp,releaseAt);g.gain.exponentialRampToValueAtTime(0.0001,stopAt);
+  const f=ac.createBiquadFilter();f.type=P.filterType;f.frequency.setValueAtTime(P.cutoff,time);f.Q.setValueAtTime(P.resonance,time);g.connect(f);f.connect(synthBus);
+  for(const pt of d.parts){const o=ac.createOscillator();o.type=pt[0];if(d.drop){o.frequency.setValueAtTime(freq*pt[1]*(1+d.drop),time);o.frequency.exponentialRampToValueAtTime(freq*pt[1],time+0.03);}else o.frequency.setValueAtTime(freq*pt[1],time);const gg=ac.createGain();gg.gain.value=pt[2]*0.9;o.connect(gg);gg.connect(g);o.start(time);o.stop(stopAt);}}
 function scaleFreqs(){const a=[];for(let o=0;o<=P.nOtt;o++)for(const s of P.steps)a.push(P.root*Math.pow(2,o+s/12));a.sort((x,y)=>x-y);return a;}
 let SCALE=scaleFreqs();
 function snap(u){const i=Math.round(1+u*(SCALE.length-1))-1;return SCALE[Math.min(Math.max(i,0),SCALE.length-1)];}
@@ -127,6 +138,7 @@ function kickAt(t){const o=ac.createOscillator(),g=ac.createGain();o.frequency.s
 function noiseAt(t,dur,hp,amp,tone){const s=ac.createBufferSource();s.buffer=noiseBuf;const f=ac.createBiquadFilter();f.type="highpass";f.frequency.value=hp;const g=ac.createGain();g.gain.setValueAtTime(amp,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(drumBus);s.start(t);s.stop(t+dur+0.02);if(tone){const o=ac.createOscillator(),og=ac.createGain();o.frequency.value=tone;og.gain.setValueAtTime(amp*.5,t);og.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(og);og.connect(drumBus);o.start(t);o.stop(t+dur+0.02);}}
 function voiceNote(t,u,vi){const v=voices[vi];voice(t,snap(u)*v.oct,0.18*(0.3+0.7*u)*v.vol,v.wave);}
 
+function syncedTime(tPhys){if(P.sync<=0)return tPhys;const sixt=60/P.bpm/4,nextGrid=gridOrigin+Math.ceil((tPhys-gridOrigin-1e-7)/sixt)*sixt;return tPhys+P.sync*(nextGrid-tPhys);}
 function scheduler(){
   if(!started||!running||ac.state!=="running")return;
   const now=ac.currentTime, at=now+0.03;
@@ -139,11 +151,11 @@ function scheduler(){
     for(let k=0;k<nsub;k++)a=rk4(a,h);
     th1[i]=a[0];th2[i]=a[1];w1[i]=a[2];w2[i]=a[3];
     const n1=Math.sign(Math.sin(th1[i])),n2=Math.sign(Math.sin(th2[i])),nr=Math.sign(Math.sin(th1[i]-th2[i]));
-    if(n1!==sgn1[i])voiceNote(at,Math.min(1,Math.abs(w1[i])/6),0,0.5);
-    if(n2!==sgn2[i]){voiceNote(at,Math.min(1,Math.abs(w2[i])/10),1,0.4);
+    if(n1!==sgn1[i])voiceNote(syncedTime(at),Math.min(1,Math.abs(w1[i])/6),0,0.5);
+    if(n2!==sgn2[i]){voiceNote(syncedTime(at),Math.min(1,Math.abs(w2[i])/10),1,0.4);
       const x1=P.L1*Math.sin(th1[i]),y1=-P.L1*Math.cos(th1[i]),x2=x1+P.L2*Math.sin(th2[i]),y2=y1-P.L2*Math.cos(th2[i]);
       flashes.push({t:now,x:x2,y:y2,i});}
-    if(nr!==sgnr[i])voiceNote(at,Math.min(1,Math.abs(w1[i]-w2[i])/12),2,0.35);
+    if(nr!==sgnr[i])voiceNote(syncedTime(at),Math.min(1,Math.abs(w1[i]-w2[i])/12),2,0.35);
     sgn1[i]=n1;sgn2[i]=n2;sgnr[i]=nr;
     const x1=P.L1*Math.sin(th1[i]),y1=-P.L1*Math.cos(th1[i]);
     trails[i].push([x1+P.L2*Math.sin(th2[i]),y1-P.L2*Math.cos(th2[i])]);if(trails[i].length>90)trails[i].shift();
@@ -161,7 +173,7 @@ function scheduler(){
   const cut=now-2;flashes=flashes.filter(f=>f.t>cut);
 }
 let flashes=[];
-function startClocks(){initState();stepIdx=0;nextStep=ac.currentTime;lastSim=ac.currentTime;flashes=[];}
+function startClocks(){initState();stepIdx=0;gridOrigin=ac.currentTime;nextStep=gridOrigin;lastSim=ac.currentTime;flashes=[];}
 
 // disegno
 const cv=document.getElementById("cv"),cx=cv.getContext("2d");
@@ -191,7 +203,9 @@ draw();
 
 // UI
 const $=id=>document.getElementById(id);
-function bindR(id,key,span,fix){const el=$(id);el.oninput=()=>{P[key]=parseFloat(el.value);if(span)$(span).textContent=P[key].toFixed(fix);if(key==="root"){SCALE=scaleFreqs();}if(key==="drive"&&started)shaper.curve=driveCurve(P.drive);if(key==="vol"&&started)volGain.gain.setTargetAtTime(P.vol,ac.currentTime,0.02);if(key==="instVol"&&started)synthBus.gain.setTargetAtTime(P.instVol,ac.currentTime,0.02);if(key==="baseVol"&&started)drumBus.gain.setTargetAtTime(P.baseVol,ac.currentTime,0.02);};}
+function bindSynth(id,key,out,fix,suffix="",multiplier=1){$(id).oninput=e=>{P[key]=parseFloat(e.target.value);$(out).textContent=(P[key]*multiplier).toFixed(fix)+suffix;};}
+bindSynth("attack","attack","vAttack",2," s");bindSynth("decay","decay","vDecay",2," s");bindSynth("sustain","sustain","vSustain",0,"%",100);bindSynth("release","release","vRelease",2," s");bindSynth("cutoff","cutoff","vCutoff",0," Hz");bindSynth("resonance","resonance","vResonance",2);bindSynth("sync","sync","vSync",0,"%",100);$("filtertype").onchange=e=>P.filterType=e.target.value;
+function bindR(id,key,span,fix){const el=$(id);el.oninput=()=>{P[key]=parseFloat(el.value);if(span)$(span).textContent=P[key].toFixed(fix);if(key==="root"){SCALE=scaleFreqs();if(key==="bpm"&&started){const sixt=60/P.bpm/4;gridOrigin=nextStep-stepIdx*sixt;}}if(key==="drive"&&started)shaper.curve=driveCurve(P.drive);if(key==="vol"&&started)volGain.gain.setTargetAtTime(P.vol,ac.currentTime,0.02);if(key==="instVol"&&started)synthBus.gain.setTargetAtTime(P.instVol,ac.currentTime,0.02);if(key==="baseVol"&&started)drumBus.gain.setTargetAtTime(P.baseVol,ac.currentTime,0.02);};}
 bindR("np","N","vN",0);bindR("m1","m1","vm1",1);bindR("m2","m2","vm2",1);bindR("l1","L1","vl1",1);bindR("l2","L2","vl2",1);
 bindR("g","g","vg",1);bindR("damp","damp","vdamp",3);bindR("tau","tau","vtau",1);bindR("pushamt","pushamt","vpush",1);
 bindR("root","root","vroot",0);bindR("bpm","bpm","vbpm",0);bindR("drive","drive","vdrive",1);bindR("vol","vol","vvol",2);

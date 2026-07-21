@@ -6,6 +6,12 @@
 Sito statico, nessuna dipendenza esterna, nessun build. Funziona aprendo
 `index.html` in un browser e va online su GitHub Pages senza configurazione.
 
+## Trasparenza sull'assistenza AI
+
+Il progetto e le decisioni editoriali sono di Michele Loi. Alcune parti del
+codice e dell'interfaccia sono state sviluppate con l'assistenza di OpenAI
+Codex; l'autore ne ha effettuato revisione e integrazione nel progetto.
+
 ## Struttura
 
 ```

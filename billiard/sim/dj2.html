@@ -17,6 +17,7 @@
   input[type=range]{width:100%}select{width:100%;padding:4px;background:#14141e;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:5px}
   hr{border:none;border-top:1px solid #1c1c28;margin:10px 0}.val{float:right;color:#d8d8e0}
   .ball{border:1px solid #1c1c28;border-radius:6px;padding:6px;margin-bottom:6px}
+  .ball-synth{margin-top:8px;padding-top:6px;border-top:1px solid #252538}.ball-synth summary{color:#ffb34d;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.08em}
   #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#667;font-size:15px;pointer-events:none}
   #lang{position:absolute;top:8px;right:8px;width:auto;flex:none;padding:4px 10px}
   .chk{display:inline;width:auto;flex:none;margin-bottom:6px}
@@ -71,7 +72,8 @@ function setLang(l){LANG=l;document.querySelectorAll("[data-t]").forEach(e=>{con
 const BASE_SPEED=3,VIEW=1.6,pExp=0.9;
 const P={config:"diagonale",topo:"stadio",scala:0.7,eps:0.3,root:110,nOtt:2,steps:[0,3,5,7,10],
   patA:"two-step",patB:"off",bpm:172,wob:true,wr:2,drive:1.3,vol:0.8,instVol:0.95,baseVol:0.75};
-const balls=[{wave:"contrabbasso",oct:0.5,spd:3,vol:1},{wave:"tromba",oct:1,spd:1.5,vol:0.9},{wave:"synth",oct:1,spd:2,vol:0.8}];
+const makeSynth=()=>({attack:0.01,decay:0.18,sustain:0.55,release:0.22,filterType:"lowpass",cutoff:3200,resonance:0.7,sync:0});
+const balls=[{wave:"contrabbasso",oct:0.5,spd:3,vol:1,synth:makeSynth()},{wave:"tromba",oct:1,spd:1.5,vol:0.9,synth:makeSynth()},{wave:"synth",oct:1,spd:2,vol:0.8,synth:makeSynth()}];
 const COL=["#ff4638","#5adc78","#50aaff"],CORE=["#ffb4aa","#beffc8","#bedcff"];
 const WAVES=["sine","triangle","saw","square"],WMAP={sine:"sine",triangle:"triangle",saw:"sawtooth",square:"square"};
 const PATTERNS={off:{},"two-step":{k:[0,10],s:[8],h:[0,2,4,6,8,10,12,14]},four:{k:[0,4,8,12],s:[4,12],h:[2,6,10,14]},breakbeat:{k:[0,10,11],s:[4,12,14],h:[0,2,4,6,8,10,12,14]},punk:{k:[0,4,8,12],s:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},dubstep:{k:[0],s:[8],h:[0,4,8,12],o:[6,14]}};
@@ -96,7 +98,7 @@ function ballExit(b){let t=rayExit(BP[b][0],BP[b][1],BD[b][0],BD[b][1]);if(t===n
 function newSeg(b,t0){const len=ballExit(b),flight=len/(BASE_SPEED*balls[b].spd),hit=[BP[b][0]+len*BD[b][0],BP[b][1]+len*BD[b][1]];seg[b]={t0,t1:t0+flight,p0:BP[b].slice(),dir:BD[b].slice(),len,hit};segs[b].push(seg[b]);}
 
 // audio
-let ac,synthBus,drumBus,instGain,drumGain,shaper,volGain,noiseBuf,wobOsc,wobDepth,stepIdx=0,nextStep=0,running=false,started=false;
+let ac,synthBus,drumBus,instGain,drumGain,shaper,volGain,noiseBuf,wobOsc,wobDepth,stepIdx=0,nextStep=0,gridOrigin=0,running=false,started=false;
 const INSTR={
   basso:{atk:.005,dec:.30,parts:[["sine",1,1],["sine",2,.25]]},
   contrabbasso:{atk:.004,dec:.30,drop:.09,parts:[["triangle",1,1],["sine",2,.2],["sine",3,.08]]},
@@ -106,10 +108,11 @@ const INSTR={
   campana:{atk:.001,dec:.55,parts:[["sine",1,1],["sine",2.76,.5],["sine",5.4,.25]]}
 };
 const INST_NAMES=Object.keys(INSTR);
-function voice(time,freq,amp,name){const d=INSTR[name]||INSTR.basso,g=ac.createGain();
-  g.gain.setValueAtTime(0.0001,time);g.gain.linearRampToValueAtTime(amp,time+d.atk);g.gain.exponentialRampToValueAtTime(0.0001,time+d.dec+0.05);
-  if(d.lp){const f=ac.createBiquadFilter();f.type="lowpass";f.frequency.value=d.lp;g.connect(f);f.connect(synthBus);}else g.connect(synthBus);
-  for(const pt of d.parts){const o=ac.createOscillator();o.type=pt[0];if(d.drop){o.frequency.setValueAtTime(freq*pt[1]*(1+d.drop),time);o.frequency.exponentialRampToValueAtTime(freq*pt[1],time+0.03);}else o.frequency.setValueAtTime(freq*pt[1],time);const gg=ac.createGain();gg.gain.value=pt[2]*0.9;o.connect(gg);gg.connect(g);o.start(time);o.stop(time+d.dec+0.1);}}
+function voice(time,freq,amp,name,synth){const d=INSTR[name]||INSTR.basso,g=ac.createGain(),s=synth;
+  const attackEnd=time+s.attack,decayEnd=attackEnd+s.decay,releaseAt=decayEnd+Math.max(0.08,d.dec||0.30),stopAt=releaseAt+s.release+0.03,sustainAmp=Math.max(0.0001,amp*s.sustain);
+  g.gain.setValueAtTime(0.0001,time);g.gain.linearRampToValueAtTime(amp,attackEnd);g.gain.linearRampToValueAtTime(sustainAmp,decayEnd);g.gain.setValueAtTime(sustainAmp,releaseAt);g.gain.exponentialRampToValueAtTime(0.0001,stopAt);
+  const f=ac.createBiquadFilter();f.type=s.filterType;f.frequency.setValueAtTime(s.cutoff,time);f.Q.setValueAtTime(s.resonance,time);g.connect(f);f.connect(synthBus);
+  for(const pt of d.parts){const o=ac.createOscillator();o.type=pt[0];if(d.drop){o.frequency.setValueAtTime(freq*pt[1]*(1+d.drop),time);o.frequency.exponentialRampToValueAtTime(freq*pt[1],time+0.03);}else o.frequency.setValueAtTime(freq*pt[1],time);const gg=ac.createGain();gg.gain.value=pt[2]*0.9;o.connect(gg);gg.connect(g);o.start(time);o.stop(stopAt);}}
 function scaleFreqs(){const a=[];for(let o=0;o<=P.nOtt;o++)for(const s of P.steps)a.push(P.root*Math.pow(2,o+s/12));a.sort((x,y)=>x-y);return a;}
 let SCALE=scaleFreqs();function snap(u){const i=Math.round(1+u*(SCALE.length-1))-1;return SCALE[Math.min(Math.max(i,0),SCALE.length-1)];}
 function driveCurve(dr){const n=1024,c=new Float32Array(n),k=Math.max(1.0001,dr),th=Math.tanh(k);for(let i=0;i<n;i++){const x=(i/(n-1))*2-1;c[i]=Math.tanh(k*x)/th}return c;}
@@ -126,6 +129,8 @@ function noteAt(t,freq,amp,wtype){const o=ac.createOscillator();o.type=wtype;o.f
 function kickAt(t){const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(45,t+0.12);g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.25);o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+0.3);}
 function noiseAt(t,dur,hp,amp,tone){const s=ac.createBufferSource();s.buffer=noiseBuf;const f=ac.createBiquadFilter();f.type="highpass";f.frequency.value=hp;const g=ac.createGain();g.gain.setValueAtTime(amp,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(drumBus);s.start(t);s.stop(t+dur+0.02);if(tone){const o=ac.createOscillator(),og=ac.createGain();o.frequency.value=tone;og.gain.setValueAtTime(amp*.5,t);og.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(og);og.connect(drumBus);o.start(t);o.stop(t+dur+0.02);}}
 
+function syncedTime(tPhys,synth){const sync=synth.sync;if(sync<=0)return tPhys;const sixt=60/P.bpm/4,nextGrid=gridOrigin+Math.ceil((tPhys-gridOrigin-1e-7)/sixt)*sixt;return tPhys+sync*(nextGrid-tPhys);}
+
 function scheduler(){
   if(!started||!running||ac.state!=="running")return;
   const ahead=ac.currentTime+0.12;
@@ -133,7 +138,7 @@ function scheduler(){
     while(seg[b].t1<ahead&&guard++<300){const hp=seg[b].hit,nrm=normal(hp[0],hp[1]);
       const dn=seg[b].dir[0]*nrm[0]+seg[b].dir[1]*nrm[1],inc=Math.abs(dn);
       let s=Math.atan2(hp[1],hp[0]);s=((s%(2*Math.PI))+2*Math.PI)%(2*Math.PI);s/=2*Math.PI;
-      voice(seg[b].t1,snap(Math.pow(s,pExp))*balls[b].oct,0.18*(0.3+0.7*inc)*balls[b].vol,balls[b].wave);
+      voice(syncedTime(seg[b].t1,balls[b].synth),snap(Math.pow(s,pExp))*balls[b].oct,0.18*(0.3+0.7*inc)*balls[b].vol,balls[b].wave,balls[b].synth);
       bounces.push({t:seg[b].t1,x:hp[0],y:hp[1],b});
       BD[b]=[seg[b].dir[0]-2*dn*nrm[0],seg[b].dir[1]-2*dn*nrm[1]];BP[b]=hp;
       const tan=[-nrm[1],nrm[0]];birk[b].push({t:seg[b].t1,s,p:BD[b][0]*tan[0]+BD[b][1]*tan[1]});if(birk[b].length>200)birk[b].shift();
@@ -146,7 +151,7 @@ function scheduler(){
     stepIdx++;nextStep+=sixt;}
   const cut=ac.currentTime-2;for(let b=0;b<3;b++)segs[b]=segs[b].filter(s=>s.t1>cut);bounces=bounces.filter(x=>x.t>cut);
 }
-function startClocks(){initBalls();for(let b=0;b<3;b++)newSeg(b,ac.currentTime);stepIdx=0;nextStep=ac.currentTime;}
+function startClocks(){initBalls();for(let b=0;b<3;b++)newSeg(b,ac.currentTime);stepIdx=0;gridOrigin=ac.currentTime;nextStep=gridOrigin;}
 
 const cv=document.getElementById("cv"),cx=cv.getContext("2d");
 function draw(){requestAnimationFrame(draw);const w=cv.clientWidth,h=cv.clientHeight;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
@@ -180,12 +185,16 @@ $("config").onchange=e=>{P.config=e.target.value;if(started)startClocks();};
 $("patA").onchange=e=>P.patA=e.target.value;$("patB").onchange=e=>P.patB=e.target.value;
 $("scale").onchange=e=>{P.steps=e.target.value.split(",").map(Number);SCALE=scaleFreqs();};
 $("wob").onchange=e=>{P.wob=e.target.checked;updateWob();};
+function addSynthControls(box,s){const d=document.createElement("details");d.className="ball-synth";const sum=document.createElement("summary");sum.textContent="SYNTH · ADSR · FILTER · SYNC";d.appendChild(sum);
+  const range=(label,key,min,max,step,format)=>{const lab=document.createElement("label"),out=document.createElement("span"),input=document.createElement("input");out.className="val";const show=()=>out.textContent=format(s[key]);lab.textContent=label+" ";lab.appendChild(out);input.type="range";input.min=min;input.max=max;input.step=step;input.value=s[key];input.oninput=e=>{s[key]=parseFloat(e.target.value);show();};show();d.appendChild(lab);d.appendChild(input);};
+  range("attack","attack",0.001,1.2,0.001,v=>v.toFixed(2)+" s");range("decay","decay",0.005,1.5,0.005,v=>v.toFixed(2)+" s");range("sustain","sustain",0.05,1,0.01,v=>Math.round(v*100)+"%");range("release","release",0.01,2,0.01,v=>v.toFixed(2)+" s");
+  const lab=document.createElement("label"),sel=document.createElement("select");lab.textContent="filter type";["lowpass","highpass","bandpass","notch"].forEach(type=>{const o=document.createElement("option");o.value=type;o.textContent=type.replace("pass","-pass");o.selected=type===s.filterType;sel.appendChild(o);});sel.onchange=e=>s.filterType=e.target.value;d.appendChild(lab);d.appendChild(sel);range("cutoff","cutoff",80,12000,10,v=>Math.round(v)+" Hz");range("resonance","resonance",0,18,0.1,v=>v.toFixed(2));range("sync","sync",0,1,0.05,v=>Math.round(v*100)+"%");box.appendChild(d);}
 function buildBalls(){const box=$("balls");box.innerHTML="";for(let b=0;b<3;b++){const d=document.createElement("div");d.className="ball";d.style.borderColor=COL[b];
   const lab=document.createElement("label");lab.className="blab";lab.textContent=T[LANG].ball+" "+(b+1);lab.style.color=COL[b];d.appendChild(lab);
   const sel=document.createElement("select");INST_NAMES.forEach(w=>{const o=document.createElement("option");o.textContent=w;if(w===balls[b].wave)o.selected=true;sel.appendChild(o);});sel.onchange=e=>balls[b].wave=e.target.value;d.appendChild(sel);
   const oc=document.createElement("input");oc.type="range";oc.min=0.25;oc.max=2;oc.step=0.05;oc.value=balls[b].oct;oc.title="ottava";oc.oninput=e=>balls[b].oct=parseFloat(e.target.value);d.appendChild(oc);
   const sp=document.createElement("input");sp.type="range";sp.min=0.4;sp.max=5;sp.step=0.1;sp.value=balls[b].spd;sp.title="spd";sp.oninput=e=>balls[b].spd=parseFloat(e.target.value);d.appendChild(sp);
-  const vr=document.createElement("input");vr.type="range";vr.min=0;vr.max=1.4;vr.step=0.01;vr.value=balls[b].vol;vr.title="volume";vr.oninput=e=>balls[b].vol=parseFloat(e.target.value);d.appendChild(vr);box.appendChild(d);}}
+  const vr=document.createElement("input");vr.type="range";vr.min=0;vr.max=1.4;vr.step=0.01;vr.value=balls[b].vol;vr.title="volume";vr.oninput=e=>balls[b].vol=parseFloat(e.target.value);d.appendChild(vr);addSynthControls(d,balls[b].synth);box.appendChild(d);}}
 buildBalls();
 function play(){if(!started){initAudio();startClocks();started=true;$("hint").style.display="none";}ac.resume();running=true;mark();}
 function pause(){if(started){ac.suspend();running=false;mark();}}

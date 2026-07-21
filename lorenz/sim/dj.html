@@ -21,6 +21,7 @@
   input[type=color]{width:100%;height:26px;padding:0;background:#14141e;border:1px solid #2a2a3a;border-radius:5px;cursor:pointer}
   hr{border:none;border-top:1px solid #1c1c28;margin:10px 0}.val{float:right;color:#d8d8e0}
   .voice{border:1px solid #1c1c28;border-radius:6px;padding:6px;margin-bottom:6px}
+  .voice-synth{margin-top:8px;padding-top:6px;border-top:1px solid #252538}.voice-synth summary{color:#ffb34d;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.08em}
   .cols{display:flex;gap:6px}.cols>div{flex:1}
   #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#667;font-size:15px;pointer-events:none}
   #lang{position:absolute;top:8px;right:8px;width:auto;flex:none;padding:4px 10px}
@@ -52,15 +53,6 @@
     <label data-t="lstep">salita / giro <span class="val" id="vstep">1</span></label><input type="range" id="step" min="0" max="4" step="1" value="1">
     <label data-t="lcresc">cresc. / giro <span class="val" id="vcresc">0.13</span></label><input type="range" id="cresc" min="0" max="0.4" step="0.01" value="0.13">
     <div id="voices"></div>
-    <div style="margin:12px 0 4px;color:#ff8c28;font-size:11px;font-weight:700;letter-spacing:.12em">SYNTH · ADSR</div>
-    <label>attack <span class="val" id="vAttack">0.01 s</span></label><input type="range" id="attack" min="0.001" max="1.2" step="0.001" value="0.01">
-    <label>decay <span class="val" id="vDecay">0.18 s</span></label><input type="range" id="decay" min="0.005" max="1.5" step="0.005" value="0.18">
-    <label>sustain <span class="val" id="vSustain">55%</span></label><input type="range" id="sustain" min="0.05" max="1" step="0.01" value="0.55">
-    <label>release <span class="val" id="vRelease">0.22 s</span></label><input type="range" id="release" min="0.01" max="2" step="0.01" value="0.22">
-    <div style="margin:12px 0 4px;color:#ff8c28;font-size:11px;font-weight:700;letter-spacing:.12em">FILTER</div>
-    <label>type</label><select id="filtertype"><option value="lowpass">low-pass</option><option value="highpass">high-pass</option><option value="bandpass">band-pass</option><option value="notch">notch</option></select>
-    <label>cutoff <span class="val" id="vCutoff">3200 Hz</span></label><input type="range" id="cutoff" min="80" max="12000" step="10" value="3200">
-    <label>resonance <span class="val" id="vResonance">0.70</span></label><input type="range" id="resonance" min="0" max="18" step="0.1" value="0.7">
     <hr>
     <label class="big" data-t="lcolori">COLORI</label>
     <div class="cols">
@@ -72,7 +64,6 @@
     <label data-t="lbase">batteria</label>
     <select id="pattern"><option value="auto">auto (dai giri)</option><option value="two-step">two-step</option><option value="four">four</option><option value="breakbeat">breakbeat</option><option value="punk">punk</option><option value="off">off</option></select>
     <label data-t="lbpm">bpm <span class="val" id="vbpm">172</span></label><input type="range" id="bpm" min="90" max="185" step="1" value="172">
-    <label>sync <span class="val" id="vSync">0%</span></label><input type="range" id="sync" min="0" max="1" step="0.05" value="0">
     <label><input type="checkbox" id="wob" checked style="width:auto"> <span data-t="lwob">wobble</span> · rate <span class="val" id="vwr">2.0</span></label>
     <input type="range" id="wr" min="0.5" max="8" step="0.5" value="2">
     <label><input type="checkbox" id="dist" checked style="width:auto"> <span data-t="ldist">distorsione</span> &nbsp; <input type="checkbox" id="rev" checked style="width:auto"> <span data-t="lrev">riverbero</span></label>
@@ -102,7 +93,8 @@ const P={config:"classico (caos)",sigma:10,rho:28,beta:2.667,speed:3,
   fSwBase:42,padRoot:55,padOct:0.9,
   colSx:"#5aa0ff",colDx:"#ff8c3c",colSw:"#e050d0",
   pattern:"auto",bpm:172,wob:true,wr:2,varDrum:0.6,drive:2.2,dist:true,reverb:true,vol:0.8,instVol:1.05,bassVol:0.42,subVol:0.3,baseVol:0.72,attack:0.01,decay:0.18,sustain:0.55,release:0.22,filterType:"lowpass",cutoff:3200,resonance:0.7,sync:0};
-const voices=[{wave:"marimba",oct:1,vol:1},{wave:"pluck",oct:1,vol:0.85},{wave:"tom",oct:1,vol:0.9}];
+const makeSynth=()=>({attack:0.01,decay:0.18,sustain:0.55,release:0.22,filterType:"lowpass",cutoff:3200,resonance:0.7,sync:0});
+const voices=[{wave:"marimba",oct:1,vol:1,synth:makeSynth()},{wave:"pluck",oct:1,vol:0.85,synth:makeSynth()},{wave:"tom",oct:1,vol:0.9,synth:makeSynth()}];
 
 // ===== fisica: attrattore di Lorenz =====
 let X=[-8,8,27], dzPrev=0, runN=0, prevLobo=0;
@@ -130,10 +122,10 @@ const INSTR={
   campana:{atk:.001,dec:.55,parts:[["sine",1,1],["sine",2.76,.5],["sine",5.4,.25]]}
 };
 const INST_NAMES=Object.keys(INSTR);
-function voice(time,freq,amp,name){const d=INSTR[name]||INSTR.basso,g=ac.createGain();
-  const attackEnd=time+P.attack,decayEnd=attackEnd+P.decay,releaseAt=decayEnd+Math.max(0.08,d.dec||0.30),stopAt=releaseAt+P.release+0.03,sustainAmp=Math.max(0.0001,amp*P.sustain);
+function voice(time,freq,amp,name,synth){const d=INSTR[name]||INSTR.basso,g=ac.createGain(),s=synth||P;
+  const attackEnd=time+s.attack,decayEnd=attackEnd+s.decay,releaseAt=decayEnd+Math.max(0.08,d.dec||0.30),stopAt=releaseAt+s.release+0.03,sustainAmp=Math.max(0.0001,amp*s.sustain);
   g.gain.setValueAtTime(0.0001,time);g.gain.linearRampToValueAtTime(amp,attackEnd);g.gain.linearRampToValueAtTime(sustainAmp,decayEnd);g.gain.setValueAtTime(sustainAmp,releaseAt);g.gain.exponentialRampToValueAtTime(0.0001,stopAt);
-  const f=ac.createBiquadFilter();f.type=P.filterType;f.frequency.setValueAtTime(P.cutoff,time);f.Q.setValueAtTime(P.resonance,time);g.connect(f);f.connect(synthBus);
+  const f=ac.createBiquadFilter();f.type=s.filterType;f.frequency.setValueAtTime(s.cutoff,time);f.Q.setValueAtTime(s.resonance,time);g.connect(f);f.connect(synthBus);
   for(const pt of d.parts){const o=ac.createOscillator();o.type=pt[0];if(d.drop){o.frequency.setValueAtTime(freq*pt[1]*(1+d.drop),time);o.frequency.exponentialRampToValueAtTime(freq*pt[1],time+0.03);}else o.frequency.setValueAtTime(freq*pt[1],time);const gg=ac.createGain();gg.gain.value=pt[2]*0.9;o.connect(gg);gg.connect(g);o.start(time);o.stop(stopAt);}}
 function scaleFreqs(steps,root){const a=[];for(let o=0;o<=P.nOtt;o++)for(const s of steps)a.push(root*Math.pow(2,o+s/12));a.sort((x,y)=>x-y);return a;}
 let FSX=scaleFreqs(P.stepsSx,P.root),FDX=scaleFreqs(P.stepsDx,2*P.root);
@@ -184,10 +176,10 @@ function bassGtr(t,freq,amp){const g=ac.createGain();
 // un giro = una nota; la salita segue runN (avvolgimenti consecutivi nella stessa ala)
 function windNote(at){const z=X[2],hN=(zmax>zmin)?Math.min(Math.max((z-zmin)/(zmax-zmin),0),1):0.5;
   const idx=1+(runN-1)*P.stepPerGiro,am=(0.45+0.55*hN)*Math.min(Math.pow(1+P.crescPerGiro,runN-1),P.capCresc);
-  if(prevLobo<0){const v=voices[0];voice(at,noteOf(FSX,idx)*v.oct,0.34*am*v.vol,v.wave);}
-  else{const v=voices[1];voice(at,noteOf(FDX,idx)*v.oct,0.30*am*v.vol,v.wave);}}
+  if(prevLobo<0){const v=voices[0];voice(at,noteOf(FSX,idx)*v.oct,0.34*am*v.vol,v.wave,v.synth);}
+  else{const v=voices[1];voice(at,noteOf(FDX,idx)*v.oct,0.30*am*v.vol,v.wave,v.synth);}}
 function tomNote(at,runLen){const v=voices[2];const f=P.fSwBase*Math.pow(2,Math.min(Math.max(runLen,1),12)/8)*v.oct;
-  voice(at,f,(0.5+0.04*Math.min(Math.max(runLen,1),10))*v.vol,v.wave);}
+  voice(at,f,(0.5+0.04*Math.min(Math.max(runLen,1),10))*v.vol,v.wave,v.synth);}
 
 // batteria pilotata dalla dinamica (densita' di giri per bar + cambi d'ala)
 const DPAT={base:{k:[0,10],s:[8]},break:{k:[0,6,10],s:[4,12,14]},sparse:{k:[0],s:[]},punk:{k:[0,4,8,12],s:[4,12]},"two-step":{k:[0,10],s:[8]},four:{k:[0,4,8,12],s:[4,12]},breakbeat:{k:[0,6,10],s:[4,12,14]},off:{k:[],s:[]}};
@@ -199,7 +191,7 @@ function chooseBarPattern(){if(P.pattern!=="auto")return;const dens=windPrevBar/
   else curPat=DPAT.base;}
 
 let trail=[],flashes=[],kickFlash=-9;
-function syncedTime(tPhys){if(P.sync<=0)return tPhys;const sixt=60/P.bpm/4,nextGrid=gridOrigin+Math.ceil((tPhys-gridOrigin-1e-7)/sixt)*sixt;return tPhys+P.sync*(nextGrid-tPhys);}
+function syncedTime(tPhys,synth){const sync=synth.sync;if(sync<=0)return tPhys;const sixt=60/P.bpm/4,nextGrid=gridOrigin+Math.ceil((tPhys-gridOrigin-1e-7)/sixt)*sixt;return tPhys+sync*(nextGrid-tPhys);}
 function scheduler(){
   if(!started||!running||ac.state!=="running")return;
   const now=ac.currentTime,at=now+0.03;
@@ -210,9 +202,9 @@ function scheduler(){
     const Xn=rk4(X,h),dz=Xn[2]-X[2];
     // AVVOLGIMENTO = massimo locale di z; l'ala e' il segno di x
     if(dzPrev>0&&dz<=0){const lobo=X[0]<0?-1:1;
-      if(lobo===prevLobo)runN++;else{if(prevLobo!==0){tomNote(syncedTime(at),runN);swBar=true;flashes.push({t:now,x:X[0],z:X[2]});}runN=1;prevLobo=lobo;}
+      if(lobo===prevLobo)runN++;else{if(prevLobo!==0){tomNote(syncedTime(at,voices[2].synth),runN);swBar=true;flashes.push({t:now,x:X[0],z:X[2]});}runN=1;prevLobo=lobo;}
       zmin=Math.min(zmin,X[2]);zmax=Math.max(zmax,X[2]);
-      windNote(syncedTime(at));windBar++;}
+      windNote(syncedTime(at,lobo<0?voices[0].synth:voices[1].synth));windBar++;}
     dzPrev=dz;X=Xn;
     trail.push([X[0],X[2],prevLobo]);if(trail.length>1400)trail.shift();   // un punto per sub-step: scia fitta e liscia
   }
@@ -272,8 +264,6 @@ draw();
 
 // ===== UI =====
 const $=id=>document.getElementById(id);
-function bindSynth(id,key,out,fix,suffix="",multiplier=1){$(id).oninput=e=>{P[key]=parseFloat(e.target.value);$(out).textContent=(P[key]*multiplier).toFixed(fix)+suffix;};}
-bindSynth("attack","attack","vAttack",2," s");bindSynth("decay","decay","vDecay",2," s");bindSynth("sustain","sustain","vSustain",0,"%",100);bindSynth("release","release","vRelease",2," s");bindSynth("cutoff","cutoff","vCutoff",0," Hz");bindSynth("resonance","resonance","vResonance",2);bindSynth("sync","sync","vSync",0,"%",100);$("filtertype").onchange=e=>P.filterType=e.target.value;
 function bindR(id,key,span,fix){const el=$(id);el.oninput=()=>{P[key]=parseFloat(el.value);if(span)$(span).textContent=P[key].toFixed(fix);
   if(key==="root")refreshScales();if(key==="bpm"&&started){const sixt=60/P.bpm/4;gridOrigin=nextStep-stepIdx*sixt;}
   if(key==="drive"&&started)shaper.curve=driveCurve(P.drive);
@@ -299,12 +289,16 @@ $("csx").oninput=e=>{P.colSx=e.target.value;buildVoices();};
 $("cdx").oninput=e=>{P.colDx=e.target.value;buildVoices();};
 $("csw").oninput=e=>{P.colSw=e.target.value;};
 // voci
+function addSynthControls(box,s){const d=document.createElement("details");d.className="voice-synth";const sum=document.createElement("summary");sum.textContent="SYNTH · ADSR · FILTER · SYNC";d.appendChild(sum);
+  const range=(label,key,min,max,step,format)=>{const lab=document.createElement("label"),out=document.createElement("span"),input=document.createElement("input");out.className="val";const show=()=>out.textContent=format(s[key]);lab.textContent=label+" ";lab.appendChild(out);input.type="range";input.min=min;input.max=max;input.step=step;input.value=s[key];input.oninput=e=>{s[key]=parseFloat(e.target.value);show();};show();d.appendChild(lab);d.appendChild(input);};
+  range("attack","attack",0.001,1.2,0.001,v=>v.toFixed(2)+" s");range("decay","decay",0.005,1.5,0.005,v=>v.toFixed(2)+" s");range("sustain","sustain",0.05,1,0.01,v=>Math.round(v*100)+"%");range("release","release",0.01,2,0.01,v=>v.toFixed(2)+" s");
+  const lab=document.createElement("label"),sel=document.createElement("select");lab.textContent="filter type";["lowpass","highpass","bandpass","notch"].forEach(type=>{const o=document.createElement("option");o.value=type;o.textContent=type.replace("pass","-pass");o.selected=type===s.filterType;sel.appendChild(o);});sel.onchange=e=>s.filterType=e.target.value;d.appendChild(lab);d.appendChild(sel);range("cutoff","cutoff",80,12000,10,v=>Math.round(v)+" Hz");range("resonance","resonance",0,18,0.1,v=>v.toFixed(2));range("sync","sync",0,1,0.05,v=>Math.round(v*100)+"%");box.appendChild(d);}
 function buildVoices(){const box=$("voices");box.innerHTML='<hr><label class="big">'+T[LANG].lvoices+'</label>';const VCOL=[P.colSx,P.colDx,P.colSw];
   voices.forEach((v,vi)=>{const d=document.createElement("div");d.className="voice";d.style.borderColor=VCOL[vi];
     const lab=document.createElement("label");lab.textContent=T[LANG]["v"+vi];lab.style.color=VCOL[vi];d.appendChild(lab);
     const sel=document.createElement("select");INST_NAMES.forEach(w=>{const o=document.createElement("option");o.textContent=w;if(w===v.wave)o.selected=true;sel.appendChild(o);});sel.onchange=e=>voices[vi].wave=e.target.value;d.appendChild(sel);
     const r=document.createElement("input");r.type="range";r.min=0.25;r.max=3;r.step=0.05;r.value=v.oct;r.title="ottava";r.oninput=e=>voices[vi].oct=parseFloat(e.target.value);d.appendChild(r);
-    const vr=document.createElement("input");vr.type="range";vr.min=0;vr.max=1.4;vr.step=0.01;vr.value=v.vol;vr.title="volume";vr.oninput=e=>voices[vi].vol=parseFloat(e.target.value);d.appendChild(vr);box.appendChild(d);});}
+    const vr=document.createElement("input");vr.type="range";vr.min=0;vr.max=1.4;vr.step=0.01;vr.value=v.vol;vr.title="volume";vr.oninput=e=>voices[vi].vol=parseFloat(e.target.value);d.appendChild(vr);addSynthControls(d,v.synth);box.appendChild(d);});}
 buildVoices();
 function play(){if(!started){initAudio();startClocks();started=true;$("hint").style.display="none";}ac.resume();running=true;mark();}
 function pause(){if(started){ac.suspend();running=false;mark();}}

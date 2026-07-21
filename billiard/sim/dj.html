@@ -122,6 +122,7 @@
   <div id="stage">
     <canvas id="cv"></canvas>
     <a id="back" href="../" data-t="back" style="position:absolute;top:8px;left:8px;padding:4px 10px;background:#1c1c2a;color:#8ee;border:1px solid #2a2a3a;border-radius:6px;text-decoration:none">Spiegazione del modello</a>
+    <a id="home" href="../../" data-t="home" style="position:absolute;top:44px;left:8px;padding:4px 10px;background:#1c1c2a;color:#8ee;border:1px solid #2a2a3a;border-radius:6px;text-decoration:none">← Indice</a>
     <button id="lang" style="position:absolute;top:8px;right:8px;padding:4px 10px;background:#1c1c2a;color:#d8d8e0;border:1px solid #2a2a3a;border-radius:6px;cursor:pointer">EN</button>
     <div id="hint" data-t="hint">Premi ▶ Play per avviare l'audio</div>
   </div>
@@ -382,7 +383,7 @@ initBall();
 // ---------- bilingue IT/EN ----------
 const T={it:{pause:"‖ Pausa",back:"← indietro",lcfg:"Config. iniziale",ltopo:"Topologia",lscala:"scalaBil (dimensione = ritmo)",lspd:"spd (velocità)",leps:"eps (solo ovale)",lroot:"root Hz",lscale:"scala",loct:"ottava voce",linst:"strumento",lbase:"base ritmica",lbpm:"bpm",lsync:"sync",ldrive:"drive (distorsione)",lvstr:"vol strumenti",lvbase:"vol base",lvol:"volume master",hint:"Premi ▶ Play per avviare l'audio"},
  en:{pause:"‖ Pause",back:"← back",lcfg:"Start config",ltopo:"Topology",lscala:"scalaBil (size = rhythm)",lspd:"spd (speed)",leps:"eps (oval only)",lroot:"root Hz",lscale:"scale",loct:"voice octave",linst:"instrument",lbase:"drum base",lbpm:"bpm",lsync:"sync",ldrive:"drive (distortion)",lvstr:"instr. volume",lvbase:"drum volume",lvol:"master volume",hint:"Press ▶ Play to start audio"}};
-T.it.back="Spiegazione del modello";T.en.back="Model explanation";
+T.it.back="Spiegazione del modello";T.en.back="Model explanation";T.it.home="← Indice";T.en.home="← Index";
 let LANG=localStorage.getItem("lang")||"it";
 function setLang(l){LANG=l;localStorage.setItem("lang",l);document.documentElement.lang=l;
   document.querySelectorAll("[data-t]").forEach(e=>{const k=e.getAttribute("data-t"),t=T[l][k];if(t===undefined)return;const v=e.querySelector(".val");if(v){e.textContent=t+" ";e.appendChild(v);}else e.textContent=t;});
